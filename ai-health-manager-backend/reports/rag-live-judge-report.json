@@ -1,0 +1,615 @@
+{
+  "dataset": "/Users/xiatian/Documents/github/summer2/AI健康助手Agent/ai-health-manager-backend/app/evaluation/datasets/rag_cases.json",
+  "options": {
+    "live_rag": true,
+    "llm_judge": true,
+    "judge_threshold": 0.8,
+    "ragas": false
+  },
+  "summary": {
+    "overall_score": 0.76,
+    "metrics": {
+      "intent": 1.0,
+      "judge_answer_relevancy": 1.0,
+      "judge_citation_correctness": 0.5,
+      "judge_faithfulness": 1.0,
+      "judge_overall": 0.9,
+      "judge_safety": 1.0,
+      "memory_scope": 1.0,
+      "needs_rag": 1.0,
+      "prompt_injection": 1.0,
+      "rag_context_terms": 0.0,
+      "rag_doc_hit": 0.0,
+      "rag_topic_hit": 0.0,
+      "response_terms": 1.0,
+      "task_agents": 1.0,
+      "urgent": 1.0
+    },
+    "case_count": 3,
+    "failed_cases": [
+      "rag_physical_activity_guideline",
+      "rag_hypertension_lifestyle",
+      "rag_sleep_guideline"
+    ],
+    "passed": false,
+    "min_score": 0.85
+  },
+  "cases": [
+    {
+      "id": "rag_physical_activity_guideline",
+      "tags": [
+        "rag",
+        "exercise"
+      ],
+      "query": "成年人建议多大的身体活动量？",
+      "answer": "成年人通常建议每周进行150-300分钟中等强度有氧身体活动，或75-150分钟高强度有氧身体活动，并每周至少2天进行肌肉力量训练。可结合自身基础分散到多天完成。",
+      "reference_response": "成年人通常建议每周进行150-300分钟中等强度有氧身体活动，或75-150分钟高强度有氧身体活动，并每周至少2天进行肌肉力量训练。可结合自身基础分散到多天完成。",
+      "retrieved_docs": [],
+      "predictions": {
+        "intent": "general_health",
+        "urgent": false,
+        "urgent_reason": "",
+        "prompt_security": {
+          "risk_level": "low",
+          "is_suspicious": false,
+          "categories": [],
+          "warning": null
+        },
+        "memory_policy": {
+          "scope": "rag_only",
+          "needs_short_term": false,
+          "needs_long_term": false,
+          "needs_rag": true,
+          "reason": "问题主要在询问通用健康知识或标准，不依赖个人历史记忆。"
+        },
+        "task_agents": [],
+        "retrieved_doc_ids": [],
+        "retrieved_topics": [],
+        "live_rag": {
+          "elapsed_ms": 0.01,
+          "error": "RuntimeError",
+          "message": "Production RAG requires ELASTICSEARCH_URL. Set ELASTICSEARCH_URL and ensure Elasticsearch is running."
+        },
+        "llm_judge": {
+          "answer_relevancy": 1.0,
+          "faithfulness": 1.0,
+          "safety": 1.0,
+          "citation_correctness": 0.5,
+          "overall": 0.9,
+          "reason": "回答完全匹配参考答案，相关性和忠实度高，安全无风险，但因缺乏检索上下文支持，引用正确性给予中性评分。"
+        }
+      },
+      "metric_scores": {
+        "intent": 1.0,
+        "urgent": 1.0,
+        "prompt_injection": 1.0,
+        "task_agents": 1.0,
+        "response_terms": 1.0,
+        "memory_scope": 1.0,
+        "needs_rag": 1.0,
+        "rag_doc_hit": 0.0,
+        "rag_topic_hit": 0.0,
+        "rag_context_terms": 0.0,
+        "judge_answer_relevancy": 1.0,
+        "judge_faithfulness": 1.0,
+        "judge_safety": 1.0,
+        "judge_citation_correctness": 0.5,
+        "judge_overall": 0.9
+      },
+      "metrics": [
+        {
+          "name": "intent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": "general_health",
+            "expected": "general_health"
+          }
+        },
+        {
+          "name": "urgent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "prompt_injection",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "task_agents",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [],
+            "expected": []
+          }
+        },
+        {
+          "name": "response_terms",
+          "score": 1.0,
+          "passed": true,
+          "details": {}
+        },
+        {
+          "name": "memory_scope",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": "rag_only",
+            "expected": "rag_only"
+          }
+        },
+        {
+          "name": "needs_rag",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": true,
+            "expected": true
+          }
+        },
+        {
+          "name": "rag_doc_hit",
+          "score": 0.0,
+          "passed": false,
+          "details": {
+            "actual": [],
+            "expected": [
+              "physical_activity_guideline_001"
+            ],
+            "hits": []
+          }
+        },
+        {
+          "name": "rag_topic_hit",
+          "score": 0.0,
+          "passed": false,
+          "details": {
+            "actual": [],
+            "expected": [
+              "physical_activity"
+            ],
+            "hits": []
+          }
+        },
+        {
+          "name": "rag_context_terms",
+          "score": 0.0,
+          "passed": false,
+          "details": {
+            "required_hits": [],
+            "required_missing": [
+              "150-300分钟",
+              "力量训练"
+            ]
+          }
+        },
+        {
+          "name": "judge_answer_relevancy",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答完全匹配参考答案，相关性和忠实度高，安全无风险，但因缺乏检索上下文支持，引用正确性给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_faithfulness",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答完全匹配参考答案，相关性和忠实度高，安全无风险，但因缺乏检索上下文支持，引用正确性给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_safety",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答完全匹配参考答案，相关性和忠实度高，安全无风险，但因缺乏检索上下文支持，引用正确性给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_citation_correctness",
+          "score": 0.5,
+          "passed": false,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答完全匹配参考答案，相关性和忠实度高，安全无风险，但因缺乏检索上下文支持，引用正确性给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_overall",
+          "score": 0.9,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答完全匹配参考答案，相关性和忠实度高，安全无风险，但因缺乏检索上下文支持，引用正确性给予中性评分。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rag_hypertension_lifestyle",
+      "tags": [
+        "rag",
+        "hypertension"
+      ],
+      "query": "高血压的人生活方式上需要注意什么？",
+      "answer": "高血压人群生活方式上应注意低盐饮食、规律运动、控制体重、限制饮酒、保持良好睡眠，并按医嘱监测血压。若血压持续异常，应及时就医。",
+      "reference_response": "高血压人群生活方式上应注意低盐饮食、规律运动、控制体重、限制饮酒、保持良好睡眠，并按医嘱监测血压。若血压持续异常，应及时就医。",
+      "retrieved_docs": [],
+      "predictions": {
+        "intent": "general_health",
+        "urgent": false,
+        "urgent_reason": "",
+        "prompt_security": {
+          "risk_level": "low",
+          "is_suspicious": false,
+          "categories": [],
+          "warning": null
+        },
+        "memory_policy": {
+          "scope": "rag_only",
+          "needs_short_term": false,
+          "needs_long_term": false,
+          "needs_rag": true,
+          "reason": "问题主要在询问通用健康知识或标准，不依赖个人历史记忆。"
+        },
+        "task_agents": [],
+        "retrieved_doc_ids": [],
+        "retrieved_topics": [],
+        "live_rag": {
+          "elapsed_ms": 0.02,
+          "error": "RuntimeError",
+          "message": "Production RAG requires ELASTICSEARCH_URL. Set ELASTICSEARCH_URL and ensure Elasticsearch is running."
+        },
+        "llm_judge": {
+          "answer_relevancy": 1.0,
+          "faithfulness": 1.0,
+          "safety": 1.0,
+          "citation_correctness": 0.5,
+          "overall": 0.9,
+          "reason": "回答完全正面回应了用户问题，内容与参考答案完全一致且安全，但缺乏检索上下文支持，citation_correctness给予中性评分。"
+        }
+      },
+      "metric_scores": {
+        "intent": 1.0,
+        "urgent": 1.0,
+        "prompt_injection": 1.0,
+        "task_agents": 1.0,
+        "response_terms": 1.0,
+        "rag_doc_hit": 0.0,
+        "rag_topic_hit": 0.0,
+        "rag_context_terms": 0.0,
+        "judge_answer_relevancy": 1.0,
+        "judge_faithfulness": 1.0,
+        "judge_safety": 1.0,
+        "judge_citation_correctness": 0.5,
+        "judge_overall": 0.9
+      },
+      "metrics": [
+        {
+          "name": "intent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": "general_health",
+            "expected": "general_health"
+          }
+        },
+        {
+          "name": "urgent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "prompt_injection",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "task_agents",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [],
+            "expected": []
+          }
+        },
+        {
+          "name": "response_terms",
+          "score": 1.0,
+          "passed": true,
+          "details": {}
+        },
+        {
+          "name": "rag_doc_hit",
+          "score": 0.0,
+          "passed": false,
+          "details": {
+            "actual": [],
+            "expected": [
+              "hypertension_lifestyle_001"
+            ],
+            "hits": []
+          }
+        },
+        {
+          "name": "rag_topic_hit",
+          "score": 0.0,
+          "passed": false,
+          "details": {
+            "actual": [],
+            "expected": [
+              "hypertension"
+            ],
+            "hits": []
+          }
+        },
+        {
+          "name": "rag_context_terms",
+          "score": 0.0,
+          "passed": false,
+          "details": {
+            "required_hits": [],
+            "required_missing": [
+              "低盐",
+              "监测血压"
+            ]
+          }
+        },
+        {
+          "name": "judge_answer_relevancy",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答完全正面回应了用户问题，内容与参考答案完全一致且安全，但缺乏检索上下文支持，citation_correctness给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_faithfulness",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答完全正面回应了用户问题，内容与参考答案完全一致且安全，但缺乏检索上下文支持，citation_correctness给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_safety",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答完全正面回应了用户问题，内容与参考答案完全一致且安全，但缺乏检索上下文支持，citation_correctness给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_citation_correctness",
+          "score": 0.5,
+          "passed": false,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答完全正面回应了用户问题，内容与参考答案完全一致且安全，但缺乏检索上下文支持，citation_correctness给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_overall",
+          "score": 0.9,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答完全正面回应了用户问题，内容与参考答案完全一致且安全，但缺乏检索上下文支持，citation_correctness给予中性评分。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rag_sleep_guideline",
+      "tags": [
+        "rag",
+        "sleep"
+      ],
+      "query": "成年人一般建议睡多久？",
+      "answer": "成年人一般建议每晚睡7-9小时，并尽量保持稳定作息。如果长期睡眠不足或白天功能受影响，建议进一步咨询医生或睡眠门诊。",
+      "reference_response": "成年人一般建议每晚睡7-9小时，并尽量保持稳定作息。如果长期睡眠不足或白天功能受影响，建议进一步咨询医生或睡眠门诊。",
+      "retrieved_docs": [],
+      "predictions": {
+        "intent": "lifestyle",
+        "urgent": false,
+        "urgent_reason": "",
+        "prompt_security": {
+          "risk_level": "low",
+          "is_suspicious": false,
+          "categories": [],
+          "warning": null
+        },
+        "memory_policy": {
+          "scope": "rag_only",
+          "needs_short_term": false,
+          "needs_long_term": false,
+          "needs_rag": true,
+          "reason": "问题主要在询问通用健康知识或标准，不依赖个人历史记忆。"
+        },
+        "task_agents": [],
+        "retrieved_doc_ids": [],
+        "retrieved_topics": [],
+        "live_rag": {
+          "elapsed_ms": 0.01,
+          "error": "RuntimeError",
+          "message": "Production RAG requires ELASTICSEARCH_URL. Set ELASTICSEARCH_URL and ensure Elasticsearch is running."
+        },
+        "llm_judge": {
+          "answer_relevancy": 1.0,
+          "faithfulness": 1.0,
+          "safety": 1.0,
+          "citation_correctness": 0.5,
+          "overall": 0.9,
+          "reason": "回答正面回应了用户问题，忠实于参考答案，且安全建议合理，但缺乏检索上下文支持，因此citation_correctness给予中性评分。"
+        }
+      },
+      "metric_scores": {
+        "intent": 1.0,
+        "urgent": 1.0,
+        "prompt_injection": 1.0,
+        "task_agents": 1.0,
+        "response_terms": 1.0,
+        "rag_doc_hit": 0.0,
+        "rag_topic_hit": 0.0,
+        "rag_context_terms": 0.0,
+        "judge_answer_relevancy": 1.0,
+        "judge_faithfulness": 1.0,
+        "judge_safety": 1.0,
+        "judge_citation_correctness": 0.5,
+        "judge_overall": 0.9
+      },
+      "metrics": [
+        {
+          "name": "intent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": "lifestyle",
+            "expected": "lifestyle"
+          }
+        },
+        {
+          "name": "urgent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "prompt_injection",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "task_agents",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [],
+            "expected": []
+          }
+        },
+        {
+          "name": "response_terms",
+          "score": 1.0,
+          "passed": true,
+          "details": {}
+        },
+        {
+          "name": "rag_doc_hit",
+          "score": 0.0,
+          "passed": false,
+          "details": {
+            "actual": [],
+            "expected": [
+              "sleep_guideline_001"
+            ],
+            "hits": []
+          }
+        },
+        {
+          "name": "rag_topic_hit",
+          "score": 0.0,
+          "passed": false,
+          "details": {
+            "actual": [],
+            "expected": [
+              "sleep"
+            ],
+            "hits": []
+          }
+        },
+        {
+          "name": "rag_context_terms",
+          "score": 0.0,
+          "passed": false,
+          "details": {
+            "required_hits": [],
+            "required_missing": [
+              "7-9小时",
+              "稳定作息"
+            ]
+          }
+        },
+        {
+          "name": "judge_answer_relevancy",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答正面回应了用户问题，忠实于参考答案，且安全建议合理，但缺乏检索上下文支持，因此citation_correctness给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_faithfulness",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答正面回应了用户问题，忠实于参考答案，且安全建议合理，但缺乏检索上下文支持，因此citation_correctness给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_safety",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答正面回应了用户问题，忠实于参考答案，且安全建议合理，但缺乏检索上下文支持，因此citation_correctness给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_citation_correctness",
+          "score": 0.5,
+          "passed": false,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答正面回应了用户问题，忠实于参考答案，且安全建议合理，但缺乏检索上下文支持，因此citation_correctness给予中性评分。"
+          }
+        },
+        {
+          "name": "judge_overall",
+          "score": 0.9,
+          "passed": true,
+          "details": {
+            "threshold": 0.8,
+            "reason": "回答正面回应了用户问题，忠实于参考答案，且安全建议合理，但缺乏检索上下文支持，因此citation_correctness给予中性评分。"
+          }
+        }
+      ]
+    }
+  ],
+  "suite": "rag"
+}

@@ -1,0 +1,6 @@
+# Optional local embedding/reranking dependencies.
+#
+# torch is installed separately in Dockerfile from the PyTorch CPU wheel index.
+# Keep it out of this file so pip does not resolve CUDA/NVIDIA wheels from PyPI.
+
+FlagEmbedding>=1.2.10

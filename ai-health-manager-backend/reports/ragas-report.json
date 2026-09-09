@@ -1,0 +1,514 @@
+{
+  "dataset": "/Users/xiatian/Documents/github/summer2/AI健康助手Agent/ai-health-manager-backend/app/evaluation/datasets/rag_cases.json",
+  "options": {
+    "live_rag": false,
+    "llm_judge": false,
+    "judge_threshold": 0.8,
+    "ragas": true
+  },
+  "summary": {
+    "overall_score": 1.0,
+    "metrics": {
+      "intent": 1.0,
+      "memory_scope": 1.0,
+      "needs_rag": 1.0,
+      "prompt_injection": 1.0,
+      "rag_context_terms": 1.0,
+      "rag_doc_hit": 1.0,
+      "rag_topic_hit": 1.0,
+      "response_terms": 1.0,
+      "task_agents": 1.0,
+      "urgent": 1.0
+    },
+    "case_count": 3,
+    "failed_cases": [],
+    "passed": true,
+    "min_score": 0.85
+  },
+  "cases": [
+    {
+      "id": "rag_physical_activity_guideline",
+      "tags": [
+        "rag",
+        "exercise"
+      ],
+      "query": "成年人建议多大的身体活动量？",
+      "answer": "成年人通常建议每周进行150-300分钟中等强度有氧身体活动，或75-150分钟高强度有氧身体活动，并每周至少2天进行肌肉力量训练。可结合自身基础分散到多天完成。",
+      "reference_response": "成年人通常建议每周进行150-300分钟中等强度有氧身体活动，或75-150分钟高强度有氧身体活动，并每周至少2天进行肌肉力量训练。可结合自身基础分散到多天完成。",
+      "retrieved_docs": [
+        {
+          "id": "physical_activity_guideline_001",
+          "title": "成年人身体活动建议",
+          "content": "成年人每周至少进行150-300分钟中等强度有氧身体活动，或75-150分钟高强度有氧身体活动，并应每周至少2天进行肌肉力量训练。",
+          "source": "health guideline",
+          "metadata": {
+            "topic": "physical_activity",
+            "category": "exercise"
+          }
+        },
+        {
+          "id": "sleep_guideline_001",
+          "title": "成年人睡眠建议",
+          "content": "成年人通常建议每晚保持7-9小时睡眠。",
+          "source": "health guideline",
+          "metadata": {
+            "topic": "sleep",
+            "category": "lifestyle"
+          }
+        }
+      ],
+      "predictions": {
+        "intent": "general_health",
+        "urgent": false,
+        "urgent_reason": "",
+        "prompt_security": {
+          "risk_level": "low",
+          "is_suspicious": false,
+          "categories": [],
+          "warning": null
+        },
+        "memory_policy": {
+          "scope": "rag_only",
+          "needs_short_term": false,
+          "needs_long_term": false,
+          "needs_rag": true,
+          "reason": "问题主要在询问通用健康知识或标准，不依赖个人历史记忆。"
+        },
+        "task_agents": [],
+        "retrieved_doc_ids": [
+          "physical_activity_guideline_001",
+          "sleep_guideline_001"
+        ],
+        "retrieved_topics": [
+          "physical_activity",
+          "sleep"
+        ],
+        "live_rag": null,
+        "llm_judge": null
+      },
+      "metric_scores": {
+        "intent": 1.0,
+        "urgent": 1.0,
+        "prompt_injection": 1.0,
+        "task_agents": 1.0,
+        "response_terms": 1.0,
+        "memory_scope": 1.0,
+        "needs_rag": 1.0,
+        "rag_doc_hit": 1.0,
+        "rag_topic_hit": 1.0,
+        "rag_context_terms": 1.0
+      },
+      "metrics": [
+        {
+          "name": "intent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": "general_health",
+            "expected": "general_health"
+          }
+        },
+        {
+          "name": "urgent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "prompt_injection",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "task_agents",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [],
+            "expected": []
+          }
+        },
+        {
+          "name": "response_terms",
+          "score": 1.0,
+          "passed": true,
+          "details": {}
+        },
+        {
+          "name": "memory_scope",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": "rag_only",
+            "expected": "rag_only"
+          }
+        },
+        {
+          "name": "needs_rag",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": true,
+            "expected": true
+          }
+        },
+        {
+          "name": "rag_doc_hit",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [
+              "physical_activity_guideline_001",
+              "sleep_guideline_001"
+            ],
+            "expected": [
+              "physical_activity_guideline_001"
+            ],
+            "hits": [
+              "physical_activity_guideline_001"
+            ]
+          }
+        },
+        {
+          "name": "rag_topic_hit",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [
+              "physical_activity",
+              "sleep"
+            ],
+            "expected": [
+              "physical_activity"
+            ],
+            "hits": [
+              "physical_activity"
+            ]
+          }
+        },
+        {
+          "name": "rag_context_terms",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "required_hits": [
+              "150-300分钟",
+              "力量训练"
+            ],
+            "required_missing": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "rag_hypertension_lifestyle",
+      "tags": [
+        "rag",
+        "hypertension"
+      ],
+      "query": "高血压的人生活方式上需要注意什么？",
+      "answer": "高血压人群生活方式上应注意低盐饮食、规律运动、控制体重、限制饮酒、保持良好睡眠，并按医嘱监测血压。若血压持续异常，应及时就医。",
+      "reference_response": "高血压人群生活方式上应注意低盐饮食、规律运动、控制体重、限制饮酒、保持良好睡眠，并按医嘱监测血压。若血压持续异常，应及时就医。",
+      "retrieved_docs": [
+        {
+          "id": "hypertension_lifestyle_001",
+          "title": "高血压生活方式干预",
+          "content": "高血压人群应关注低盐饮食、规律运动、控制体重、限制饮酒、保持良好睡眠，并按医嘱监测血压。",
+          "source": "hypertension guideline",
+          "metadata": {
+            "topic": "hypertension",
+            "category": "chronic_disease"
+          }
+        }
+      ],
+      "predictions": {
+        "intent": "general_health",
+        "urgent": false,
+        "urgent_reason": "",
+        "prompt_security": {
+          "risk_level": "low",
+          "is_suspicious": false,
+          "categories": [],
+          "warning": null
+        },
+        "memory_policy": {
+          "scope": "rag_only",
+          "needs_short_term": false,
+          "needs_long_term": false,
+          "needs_rag": true,
+          "reason": "问题主要在询问通用健康知识或标准，不依赖个人历史记忆。"
+        },
+        "task_agents": [],
+        "retrieved_doc_ids": [
+          "hypertension_lifestyle_001"
+        ],
+        "retrieved_topics": [
+          "hypertension"
+        ],
+        "live_rag": null,
+        "llm_judge": null
+      },
+      "metric_scores": {
+        "intent": 1.0,
+        "urgent": 1.0,
+        "prompt_injection": 1.0,
+        "task_agents": 1.0,
+        "response_terms": 1.0,
+        "rag_doc_hit": 1.0,
+        "rag_topic_hit": 1.0,
+        "rag_context_terms": 1.0
+      },
+      "metrics": [
+        {
+          "name": "intent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": "general_health",
+            "expected": "general_health"
+          }
+        },
+        {
+          "name": "urgent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "prompt_injection",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "task_agents",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [],
+            "expected": []
+          }
+        },
+        {
+          "name": "response_terms",
+          "score": 1.0,
+          "passed": true,
+          "details": {}
+        },
+        {
+          "name": "rag_doc_hit",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [
+              "hypertension_lifestyle_001"
+            ],
+            "expected": [
+              "hypertension_lifestyle_001"
+            ],
+            "hits": [
+              "hypertension_lifestyle_001"
+            ]
+          }
+        },
+        {
+          "name": "rag_topic_hit",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [
+              "hypertension"
+            ],
+            "expected": [
+              "hypertension"
+            ],
+            "hits": [
+              "hypertension"
+            ]
+          }
+        },
+        {
+          "name": "rag_context_terms",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "required_hits": [
+              "低盐",
+              "监测血压"
+            ],
+            "required_missing": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "rag_sleep_guideline",
+      "tags": [
+        "rag",
+        "sleep"
+      ],
+      "query": "成年人一般建议睡多久？",
+      "answer": "成年人一般建议每晚睡7-9小时，并尽量保持稳定作息。如果长期睡眠不足或白天功能受影响，建议进一步咨询医生或睡眠门诊。",
+      "reference_response": "成年人一般建议每晚睡7-9小时，并尽量保持稳定作息。如果长期睡眠不足或白天功能受影响，建议进一步咨询医生或睡眠门诊。",
+      "retrieved_docs": [
+        {
+          "id": "sleep_guideline_001",
+          "title": "成年人睡眠建议",
+          "content": "成年人通常建议每晚保持7-9小时睡眠，并尽量维持稳定作息。",
+          "source": "sleep guideline",
+          "metadata": {
+            "topic": "sleep",
+            "category": "lifestyle"
+          }
+        }
+      ],
+      "predictions": {
+        "intent": "lifestyle",
+        "urgent": false,
+        "urgent_reason": "",
+        "prompt_security": {
+          "risk_level": "low",
+          "is_suspicious": false,
+          "categories": [],
+          "warning": null
+        },
+        "memory_policy": {
+          "scope": "rag_only",
+          "needs_short_term": false,
+          "needs_long_term": false,
+          "needs_rag": true,
+          "reason": "问题主要在询问通用健康知识或标准，不依赖个人历史记忆。"
+        },
+        "task_agents": [],
+        "retrieved_doc_ids": [
+          "sleep_guideline_001"
+        ],
+        "retrieved_topics": [
+          "sleep"
+        ],
+        "live_rag": null,
+        "llm_judge": null
+      },
+      "metric_scores": {
+        "intent": 1.0,
+        "urgent": 1.0,
+        "prompt_injection": 1.0,
+        "task_agents": 1.0,
+        "response_terms": 1.0,
+        "rag_doc_hit": 1.0,
+        "rag_topic_hit": 1.0,
+        "rag_context_terms": 1.0
+      },
+      "metrics": [
+        {
+          "name": "intent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": "lifestyle",
+            "expected": "lifestyle"
+          }
+        },
+        {
+          "name": "urgent",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "prompt_injection",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": false,
+            "expected": false
+          }
+        },
+        {
+          "name": "task_agents",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [],
+            "expected": []
+          }
+        },
+        {
+          "name": "response_terms",
+          "score": 1.0,
+          "passed": true,
+          "details": {}
+        },
+        {
+          "name": "rag_doc_hit",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [
+              "sleep_guideline_001"
+            ],
+            "expected": [
+              "sleep_guideline_001"
+            ],
+            "hits": [
+              "sleep_guideline_001"
+            ]
+          }
+        },
+        {
+          "name": "rag_topic_hit",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "actual": [
+              "sleep"
+            ],
+            "expected": [
+              "sleep"
+            ],
+            "hits": [
+              "sleep"
+            ]
+          }
+        },
+        {
+          "name": "rag_context_terms",
+          "score": 1.0,
+          "passed": true,
+          "details": {
+            "required_hits": [
+              "7-9小时",
+              "稳定作息"
+            ],
+            "required_missing": []
+          }
+        }
+      ]
+    }
+  ],
+  "ragas": {
+    "skipped": true,
+    "reason": "Ragas dependencies are not installed: No module named 'datasets'",
+    "required_packages": [
+      "ragas",
+      "datasets"
+    ]
+  },
+  "suite": "rag"
+}
