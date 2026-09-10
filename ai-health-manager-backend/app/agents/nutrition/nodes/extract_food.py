@@ -42,10 +42,6 @@ Provide the following in JSON format:
    - category: Food category (protein, vegetable, fruit, grain, dairy, fat, beverage, condiment, other)
    - confidence: Your confidence in this extraction (0.0-1.0)
 
-2. meal_type: Type of meal described (breakfast, lunch, dinner, snack, beverage_only, mixed)
-
-3. total_items: Total number of distinct food items identified
-
 Be thorough and extract ALL food items mentioned. If quantities are not specified, use typical serving sizes as estimates.
 
 Return ONLY valid JSON without any markdown formatting or additional text."""
@@ -54,6 +50,7 @@ Return ONLY valid JSON without any markdown formatting or additional text."""
         response = await llm.json_chat(
             system_prompt=system_prompt,
             user_message=user_message,
+            stage="nutrition.extract_food",
         )
 
         # Parse response - response is already a dict from json_chat
@@ -62,6 +59,7 @@ Return ONLY valid JSON without any markdown formatting or additional text."""
             # Fallback to simple extraction
             food_desc = state.get('food_description', '')
             return {
+                **state,
                 "extracted_foods": [
                     {
                         "name": food_desc[:50] if food_desc else "unknown food",
@@ -96,13 +94,17 @@ Return ONLY valid JSON without any markdown formatting or additional text."""
         }
         logger.info(f"[extract_food] Returning keys: {list(result.keys())}")
         logger.info(f"[extract_food] Returning {len(foods)} foods")
-        return result
+        return {
+            **state,
+            **result,
+        }
 
     except Exception as e:
         logger.error(f"[extract_food] Error: {e}")
         # Fallback
         food_desc = state.get('food_description', '')
         return {
+            **state,
             "extracted_foods": [
                 {
                     "name": food_desc[:50] if food_desc else "unknown food",

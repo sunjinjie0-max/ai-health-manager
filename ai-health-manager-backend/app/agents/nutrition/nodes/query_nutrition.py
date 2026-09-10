@@ -18,6 +18,7 @@ async def query_nutrition(state: dict) -> dict:
     if not extracted_foods:
         logger.warning("[query_nutrition] No foods to query")
         return {
+            **state,
             "nutrition_data": {"items": [], "count": 0},
             "total_nutrition": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0},
         }
@@ -66,12 +67,14 @@ async def query_nutrition(state: dict) -> dict:
                 total_nutrition[key] += total.get(key, 0)
 
         return {
+            **state,
             "nutrition_data": {"items": nutrition_results, "count": len(nutrition_results)},
             "total_nutrition": total_nutrition,
         }
     except Exception as exc:
         logger.error("[query_nutrition] Tool query failed: %s", exc)
         return {
+            **state,
             "error": f"Failed to query nutrition data: {exc}",
             "nutrition_data": {"items": [], "count": 0},
             "total_nutrition": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0},

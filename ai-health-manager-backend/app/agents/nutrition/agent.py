@@ -19,6 +19,8 @@ from .nodes import (
     generate_recommendations,
     parse_input,
     query_nutrition,
+    clarification_response,
+    general_nutrition_advice,
 )
 from .state import NutritionState
 
@@ -55,6 +57,16 @@ class NutritionAgent(BaseAgent):
         )
         self._workflow = None
 
+    @staticmethod
+    def _route_after_parse(state:dict) -> str:
+        query_intent = state.get("query_intent", "unknown")
+        if query_intent in ["meal_analysis", "food_lookup", "food_comparison"]:
+            return "extract_food"
+        elif query_intent in ["general_advice", "nutrition_knowledge"]:
+            return "general_nutrition_advice"
+        else:
+            return "clarification_response"
+
     def _build_workflow(self) -> StateGraph:
         """Build the LangGraph workflow for nutrition analysis.
 
@@ -81,15 +93,25 @@ class NutritionAgent(BaseAgent):
         workflow.add_node("analyze_nutrition", analyze_nutrition)
         workflow.add_node("generate_recommendations", generate_recommendations)
         workflow.add_node("format_response", format_response)
+        workflow.add_node("clarification_response", clarification_response)
+        workflow.add_node("general_nutrition_advice", general_nutrition_advice)
 
         # Define edges (linear flow)
         workflow.set_entry_point("parse_input")
-        workflow.add_edge("parse_input", "extract_food")
+        workflow.add_conditional_edges("parse_input",
+                                      self._route_after_parse,
+                                      {
+                                        "extract_food": "extract_food",
+                                        "general_nutrition_advice": "general_nutrition_advice",
+                                        "clarification_response": "clarification_response",
+                                      })
         workflow.add_edge("extract_food", "query_nutrition")
         workflow.add_edge("query_nutrition", "analyze_nutrition")
         workflow.add_edge("analyze_nutrition", "generate_recommendations")
         workflow.add_edge("generate_recommendations", "format_response")
         workflow.add_edge("format_response", END)
+        workflow.add_edge("general_nutrition_advice", END)
+        workflow.add_edge("clarification_response", END)
 
         logger.info("[NutritionAgent] Workflow built successfully")
 
