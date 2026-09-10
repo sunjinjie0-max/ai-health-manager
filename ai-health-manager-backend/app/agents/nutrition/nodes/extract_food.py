@@ -36,13 +36,14 @@ Food Description: {state.get('food_description', '')}
 
 Provide the following in JSON format:
 1. foods: An array of food items, each with:
-   - name: The food item name (be specific, e.g., "grilled chicken breast" not just "meat")
-   - amount: Estimated quantity as a number
-   - unit: Unit of measurement (g, oz, cup, piece, slice, bowl, etc.)
+   - name: A specific, standardized Simplified Chinese food name for database lookup, regardless of the language used by the user. For example: "炸鸡", "米饭", or "奶茶". Never return English names or pinyin in this field.
+   - amount: Estimated quantity as a positive number, without text or unit symbols
+   - unit: Use exactly one of these values: "g", "kg", "ml", "l", "cup", "bowl", "piece", "slice", or "serving"
    - category: Food category (protein, vegetable, fruit, grain, dairy, fat, beverage, condiment, other)
    - confidence: Your confidence in this extraction (0.0-1.0)
 
 Be thorough and extract ALL food items mentioned. If quantities are not specified, use typical serving sizes as estimates.
+Normalize every food name to its common Simplified Chinese name while preserving important preparation details, such as "炸鸡" instead of the broader term "鸡肉".
 
 Return ONLY valid JSON without any markdown formatting or additional text."""
 
