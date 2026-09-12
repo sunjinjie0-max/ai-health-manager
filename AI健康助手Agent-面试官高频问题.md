@@ -4,12 +4,12 @@
 
 ## 0. 项目一句话定位
 
-AI健康管家是一个面向个人健康管理的多模态、多 Agent 智能健康管理系统。系统以 HealthAdvisor Agent 为主控入口，通过 LangGraph 编排营养、环境、运动等专业 Agent，结合 Elasticsearch + BGE-M3 的 RAG 知识检索、三级记忆系统、用户画像、外部健康工具和医疗安全策略，为用户提供个性化、可解释、可追溯的健康咨询与行动建议。
+AI健康管家是一个面向个人健康管理的多模态、多 Agent 智能健康管理系统。系统以 HealthAdvisor Agent 为主控入口，通过 LangGraph 编排营养、环境、运动等专业 Agent，结合 Elasticsearch + DashScope text-embedding-v4 的 RAG 知识检索、三级记忆系统、用户画像、外部健康工具和医疗安全策略，为用户提供个性化、可解释、可追溯的健康咨询与行动建议。
 
 面试时可以浓缩成这段：
 
 ```text
-这个项目不是简单调用大模型做问答，而是一个多 Agent 健康管理系统。后端用 FastAPI，Agent 工作流用 LangGraph，主 Agent 负责安全检查、意图识别、任务规划和最终回复，专业 Agent 负责营养、环境、运动等垂直任务。知识增强部分用 Elasticsearch BM25 + BGE-M3 向量混合检索，再接 reranker 和引用溯源；记忆系统包括短期会话记忆、中长期语义记忆和结构化用户画像。健康场景风险比较高，所以我把安全检查、紧急症状升级、免责声明、RAG grounding 和输出审核都放进了 Agent 流程里。
+这个项目不是简单调用大模型做问答，而是一个多 Agent 健康管理系统。后端用 FastAPI，Agent 工作流用 LangGraph，主 Agent 负责安全检查、意图识别、任务规划和最终回复，专业 Agent 负责营养、环境、运动等垂直任务。知识增强部分用 Elasticsearch BM25 + DashScope text-embedding-v4 向量混合检索，再接 reranker 和引用溯源；记忆系统包括短期会话记忆、中长期语义记忆和结构化用户画像。健康场景风险比较高，所以我把安全检查、紧急症状升级、免责声明、RAG grounding 和输出审核都放进了 Agent 流程里。
 ```
 
 ---
@@ -23,7 +23,7 @@ AI健康管家是一个面向个人健康管理的多模态、多 Agent 智能�
 ```text
 AI健康管家是一个多 Agent 智能健康管理系统，核心目标是把通用健康咨询、饮食营养分析、环境健康提醒、运动规划和长期健康画像整合到一个对话式助手里。
 
-技术上，后端采用 FastAPI，Agent 框架采用 LangGraph，把一次用户咨询拆成加载上下文、安全检查、意图识别、RAG 检索、子 Agent 调度、结果聚合和回复生成等节点。模型层通过 DeepSeek 大模型完成意图识别、信息抽取和自然语言生成。知识增强层使用 Elasticsearch BM25 + BGE-M3 dense vector 混合检索，再通过 reranker 精排，解决健康问答的可靠性和可追溯问题。
+技术上，后端采用 FastAPI，Agent 框架采用 LangGraph，把一次用户咨询拆成加载上下文、安全检查、意图识别、RAG 检索、子 Agent 调度、结果聚合和回复生成等节点。模型层通过 DeepSeek 大模型完成意图识别、信息抽取和自然语言生成。知识增强层使用 Elasticsearch BM25 + DashScope text-embedding-v4 dense vector 混合检索，再通过 reranker 精排，解决健康问答的可靠性和可追溯问题。
 
 系统采用主从式多 Agent 架构，HealthAdvisor Agent 作为主 Agent，营养、环境、运动 Agent 作为专业子 Agent。用户画像和记忆系统会长期积累用户的年龄、健康目标、饮食偏好、过敏史、运动能力等信息，用于个性化建议。健康领域比较敏感，所以我在主流程最前面加入了医疗安全检查，胸痛、呼吸困难、中风、自杀意念等紧急情况会直接提示就医，而不是进入普通问答。
 ```
@@ -65,7 +65,7 @@ AI健康管家是一个多 Agent 智能健康管理系统，核心目标是把�
 ```text
 1. 设计并实现基于 LangGraph 的多 Agent 健康咨询工作流，将安全检查、意图识别、RAG 检索、任务规划、专业 Agent 调度和结果聚合拆成可观测节点。
 
-2. 构建 Elasticsearch BM25 + BGE-M3 dense vector 的健康知识 RAG 系统，支持关键词与语义混合召回、RRF 融合、reranker 精排和引用溯源，降低健康问答幻觉。
+2. 构建 Elasticsearch BM25 + DashScope text-embedding-v4 dense vector 的健康知识 RAG 系统，支持关键词与语义混合召回、RRF 融合、reranker 精排和引用溯源，降低健康问答幻觉。
 
 3. 设计用户画像与三级记忆系统，结合 Redis 短期会话、PostgreSQL 结构化画像和 ES 向量长期记忆，实现长期个性化健康建议。
 ```
@@ -77,7 +77,7 @@ AI健康管家是一个多 Agent 智能健康管理系统，核心目标是把�
 ```text
 我主要负责后端 Agent 架构和核心链路。具体包括 BaseAgent 抽象、AgentRegistry 注册机制、AgentOrchestrator 编排器、HealthAdvisor 主 Agent 工作流，以及 Nutrition、Environment、Exercise 三个专业 Agent 的状态设计和节点实现。
 
-另外我也负责 RAG 和记忆系统设计。RAG 部分包括 ES 索引结构、BGE-M3 embedding、BM25 + vector 混合召回、RRF 融合、reranker 精排和引用拼接。记忆系统包括短期会话记忆、中长期语义记忆和用户画像合并策略。
+另外我也负责 RAG 和记忆系统设计。RAG 部分包括 ES 索引结构、DashScope text-embedding-v4、BM25 + vector 混合召回、RRF 融合、reranker 精排和引用拼接。记忆系统包括短期会话记忆、中长期语义记忆和用户画像合并策略。
 
 工程化部分，我参与了 FastAPI 接口设计、JWT 鉴权、Redis 缓存、Celery 异步任务、日志和测试设计。
 ```
@@ -400,7 +400,7 @@ Nutrition 和 Environment 通常可以并行，因为它们没有直接依赖。
 
 ## 5. RAG 技术选型与实现
 
-### 26. RAG 为什么选 Elasticsearch + BGE-M3？
+### 26. RAG 为什么选 Elasticsearch + DashScope Embedding？
 
 **考察点：RAG 选型。**
 
@@ -411,7 +411,7 @@ Nutrition 和 Environment 通常可以并行，因为它们没有直接依赖。
 
 第二类是语义泛化，比如用户说“血压有点高，吃饭要注意什么”，知识库可能写的是“高血压膳食干预”。这种场景需要 embedding 语义检索。
 
-所以我选择 Elasticsearch + BGE-M3。ES 负责全文检索、向量检索、过滤和工程化索引管理；BGE-M3 负责中文语义向量。两者结合可以同时覆盖精确召回和语义召回。
+所以我选择 Elasticsearch + DashScope text-embedding-v4。ES 负责全文检索、向量检索、过滤和工程化索引管理；DashScope 通过 API 生成 1024 维语义向量，避免本地部署 embedding 模型，更适合当前项目的 Docker 和资源条件。两者结合可以同时覆盖精确召回和语义召回。代码保留了本地 BGE-M3 兼容入口，但不是默认运行口径。
 ```
 
 ### 27. RAG 的完整流程是什么？
@@ -423,7 +423,7 @@ Nutrition 和 Environment 通常可以并行，因为它们没有直接依赖。
 
 用户问题先做清洗和必要的 query rewrite，比如把口语问题补充成检索友好的表达。
 
-然后用 BGE-M3 生成 query embedding。
+然后用 DashScope text-embedding-v4 生成 query embedding，并保证查询和入库使用相同模型与维度。
 
 检索时同时走两路：一路是 ES BM25，对 content、title、topic、category 做关键词召回；另一路是 ES dense_vector kNN，用 embedding 做语义召回。
 
@@ -519,6 +519,30 @@ metadata 里会放 category、topic、适用人群、来源等级、发布时间
 
 我会构建一套健康问答 golden set，覆盖饮食、运动、环境、慢病、紧急症状和拒答边界。
 ```
+
+### 补充题：RAG 准备了哪些数据，入库和检索做了哪些优化？
+
+**考察点：知识工程、检索优化、指标口径。**
+
+```text
+RAG 数据不是简单把几篇文档丢进向量库，而是围绕健康助手的典型场景分层建设。我把数据分为权威健康指南、营养饮食、运动与恢复、环境健康、慢病生活方式、安全边界、常见 FAQ，以及评测失败后回流的 bad case。不同数据会标注 source、title、topic、category、audience、disease_tags、risk_level 和 doc_version；权威指南用于事实依据，FAQ 主要补充口语表达覆盖，不能作为高风险建议的唯一来源。
+
+入库分六步：采集 PDF、Markdown、网页和结构化资料；解析正文并保留标题层级；清理页眉页脚、目录、重复段落和异常 OCR；优先按章节语义切分、超长时再按 token 切分并保留 overlap；补齐 metadata；最后调用 DashScope text-embedding-v4 生成 1024 维向量，连同可供 BM25 检索的文本字段写入 Elasticsearch。
+
+检索优化分为四层。第一层是数据质量，包括去重、去噪和标题路径保留；第二层是召回，BM25 覆盖“150 分钟、低盐、BMI、AQI”等精确术语，向量检索覆盖“我该做多少运动、空气不好还能跑吗”等语义表达；第三层用 RRF 融合、候选去重和 reranker 精排；第四层根据相关性、来源可信度和 token budget 动态截断 Top-K，并给 chunk 编号以绑定回答引用。向量服务失败时保留 BM25，ES 不可用时返回保守兜底建议。
+
+指标要分开说。仓库当前共有 240 条分层回归样例，其中 RAG 专项 50 条；50 条人工核心用例用于稳定回归，另外 190 条是按领域、表达和边界扩展的场景变体。简历中的 Recall@5 约 72% 到 86%、引用准确率约 90%、faithfulness 0.90，是固定知识对照集上的阶段性实验结果，不应说成 240 条确定性样例自动跑出的线上指标。面试时要主动说明它是自建离线集结果，不代表真实线上泛化效果。
+```
+
+常用数据分类可以快速概括为：
+
+| 数据类别 | 示例 | 主要作用 |
+|----------|------|----------|
+| 权威指南 | 身体活动、膳食、慢病生活方式资料 | 提供可引用的事实依据 |
+| 营养与运动 | 食物营养、增肌减脂、强度与恢复 | 支撑专业 Agent 建议 |
+| 环境健康 | AQI、PM2.5、高温、紫外线 | 支撑环境与运动联动 |
+| 安全边界 | 急症识别、诊断与处方限制 | 降低健康场景风险 |
+| FAQ 与 bad case | 口语问题、错误召回、修正答案 | 扩展表达并形成回归闭环 |
 
 ---
 
@@ -1033,16 +1057,28 @@ RAG 测试覆盖检索召回、引用正确性、答案是否忠实于文档。
 **考察点：评测数据建设。**
 
 ```text
-评测集要覆盖正常咨询和高风险边界。
+我的评测集不是只写几个 prompt 看最终回复，而是按 Agent 能力拆成六个可执行套件：HealthAdvisor 综合问答 40 条、安全 40 条、意图与多任务路由 40 条、记忆路由 40 条、RAG 50 条、端到端回放 30 条，总计 240 条。
 
-正常咨询包括饮水、睡眠、BMI、运动频率、饮食搭配、空气质量、减脂计划。
+其中最早的 50 条是人工编写的核心种子用例，覆盖简历中提到的核心链路；另外 190 条根据领域、城市、用户表达、风险边界和组合任务做场景扩展。这样既保留高质量核心集，也让每次改 Prompt、路由或检索参数时有足够的回归覆盖。240 条是全套评测样例，不是 240 条全部用于 RAG。
 
-专业 Agent 样本包括餐食营养分析、AQI 场景、不同体能等级运动计划。
+样本来源采用混合构造：从权威指南段落反向出题；枚举饮食、运动、环境、慢病和睡眠等产品路径；人工设计短期追问和跨会话记忆；构造急症、诊断处方边界和 Prompt Injection 对抗样本；把召回错误、引用错误、工具失败等 bad case 回流。LLM 可以辅助生成同义表达，但期望标签和核心高风险样本仍需人工复核。
 
-高风险样本包括胸痛、呼吸困难、中风症状、自杀意念、药物剂量、诊断请求。
-
-每个样本要有期望行为，比如必须引用知识、必须建议就医、必须拒绝处方、必须考虑用户画像。
+每条 JSON case 至少包含 id、query、tags 和 expected，按需要增加 profile、setup、reference_response 与 retrieved_docs。expected 中标注意图、紧急风险、注入风险、目标子 Agent、记忆范围、RAG 证据文档、必须/禁止出现的内容、引用数量和最大延迟。代码还校验六个数据集的精确数量、ID 全局唯一和全量离线评测通过，避免文档写 240 条但仓库里实际不足。
 ```
+
+当前代码中的分布是：
+
+| 测试套件 | 数量 | 主要验证内容 |
+|----------|-----:|--------------|
+| HealthAdvisor | 40 | 通用问答、饮食、运动、环境、症状与生活方式 |
+| Safety | 40 | 急症、自伤、诊断处方边界、Prompt Injection |
+| Routing | 40 | 单 Agent、多 Agent 与无需专业 Agent 的路由 |
+| Memory | 40 | short-only、long-only、short+RAG、long+RAG |
+| RAG | 50 | 文档命中、topic 命中、证据词覆盖与引用基础 |
+| E2E Agent | 30 | 完整工作流、编排结果、降级边界与延迟字段 |
+| **合计** | **240** | **50 条核心种子 + 190 条场景扩展** |
+
+评估流程分三层：先跑不依赖外部服务的确定性评估，验证 intent、safety、memory、routing、response terms 和预置 RAG 证据；发版前再启用真实 Agent、Elasticsearch 和工具做 E2E 回放；最后用 DeepSeek LLM Judge 与 Ragas 评估 answer relevancy、faithfulness、citation correctness 和 context quality。失败样例会输出失败指标和建议归因，并进入 regression dataset。
 
 ---
 
@@ -1114,6 +1150,37 @@ RAG 文档当作不可信内容处理，如果文档里出现“忽略之前指�
 如果是关键安全判断依赖的数据缺失，采取保守策略，比如空气质量未知时不建议高强度户外运动。
 ```
 
+### 69. bad case 有遇到哪些？请举例说明。
+
+```text
+有遇到过几类典型 bad case。我不会只说“改了 Prompt”，而会说明现象、根因、修复和回归验证。
+
+第一类是“答案基本正确，但引用对不上”。例如回答写了“成年人每周至少两天力量训练”，引用却只支持有氧时长。根因通常是生成时把多个 chunk 的信息合并了，但 citation 只绑定了排名第一的文档。修复方式是给 chunk 编号，在生成约束中要求关键结论关联 evidence_id，并在后处理中校验关键数字和引用片段；不匹配时删除无依据结论或重新生成。
+
+第二类是“增肌饮食召回偏题”。用户问训练后怎么吃，向量检索可能召回泛化减脂或普通高蛋白文章。原因是语义相近但任务目标不同。处理上会在 query rewrite 中补充“增肌、训练后、运动营养”等词，用 topic、goal、audience metadata 过滤，再通过 BM25 + dense vector + RRF + reranker 精排。这个 case 也会标注 expected rag_doc_ids、rag_topics 和 rag_context_terms。
+
+第三类是“记忆与 RAG 冲突”。比如长期记忆显示用户乳糖不耐受，而通用资料推荐牛奶补充蛋白。聚合阶段如果没有信息优先级，就可能给出不适合用户的建议。我的规则是安全约束和用户明确事实优先于通用知识；RAG 提供原则，画像和记忆负责个性化过滤。冲突无法判断时要说明不确定性，而不是自行覆盖用户事实。
+
+第四类是“记忆漏用”。用户在上一会话说周六跑步，新会话问“我一般什么时候锻炼”，早期版本可能直接给通用建议。根因是 memory_route 没识别出长期事实回忆。后来把问题分为短期追问、长期事实、个性化建议和通用知识，并分别路由到 short-only、long-only、short+RAG、long+RAG。
+
+第五类是“实时工具数据缺失”。天气或 AQI 接口失败时，不能伪造实时结果，也不能只回复一句“接口失败”。工具入口会记录 timeout、retry、source、observed_at 和 error；有新鲜缓存时带时间说明使用缓存，没有缓存时返回部分结果和保守建议，例如空气质量未知时避免高强度户外运动。
+
+第六类是“PDF 噪声误召回”。页眉、目录、断行和 OCR 错字会让关键词很多但正文价值低的 chunk 排到前面。修复包括去页眉页脚和目录、合并断行、过滤过短或重复 chunk、保留章节路径，并在重排时结合 source_type 和内容质量。
+
+第七类是“多 Agent 依赖和安全优先级错误”。例如天气跑步问题中 ExerciseAgent 先生成普通计划，或胸痛问题仍进入 RAG。前者要在任务图中声明 exercise 依赖 environment；后者必须让 safety check 位于最前，并让急症直接短路到固定就医提示。
+
+统一的处理闭环是：先看 Trace 判断错误发生在 intent、memory_route、rag_retrieve、tool_call、orchestration、generation 还是 citation verification；再选择补数据、改过滤排序、改路由依赖、加安全规则或做降级；最后把确认后的样例加入 regression dataset。当前 240 条评测集就包含这类核心种子与场景扩展。
+```
+
+### 面试表述边界：这些数据和指标应该怎么说？
+
+- 说“项目内自建离线评测集”，不要说成生产流量或大规模线上 A/B 数据。
+- 说“当前仓库有 240 条：50 条人工核心种子 + 190 条可重复生成的场景扩展”，不要说 240 条都是专家逐条标注。
+- 说“RAG 专项 50 条，全套 240 条”，不要把全套样例数量等同于 RAG benchmark 数量。
+- Recall@5、引用准确率和 faithfulness 必须对应固定数据版本、检索配置和评测报告；当前确定性回归通过只代表链路与期望标签一致，不能替代真实检索实验。
+- 不说“解决了幻觉”，应说通过权威数据、证据约束、引用校验和安全短路降低风险。
+- 被追问数据来源时，明确区分权威指南、人工核心用例、LLM 辅助表达扩展和 bad case 回流。
+
 ---
 
 ## 13. 可直接背诵的 3 分钟项目介绍
@@ -1123,7 +1190,7 @@ AI健康管家是我做的一个多模态多 Agent 健康管理系统，目标�
 
 后端用 FastAPI，Agent 工作流用 LangGraph。系统有一个 HealthAdvisor Agent 作为主控入口，负责安全检查、意图识别、任务拆解、RAG 检索、子 Agent 调度和最终回复。专业 Agent 包括 Nutrition Agent、Environment Agent、Exercise Agent，分别处理饮食营养分析、空气质量和天气风险、个性化运动计划。
 
-RAG 部分我采用 Elasticsearch BM25 + BGE-M3 dense vector 混合检索。BM25 负责精确术语和指标召回，比如 BMI、血压、AQI；BGE-M3 负责语义召回，比如用户说“血压有点高，饮食要注意什么”。两路结果通过加权 RRF 融合，再可选用 BGE reranker 精排，最后把 top-k 知识带引用注入 LLM，降低幻觉。
+RAG 部分我采用 Elasticsearch BM25 + DashScope text-embedding-v4 dense vector 混合检索。BM25 负责精确术语和指标召回，比如 BMI、血压、AQI；DashScope embedding 负责语义召回，比如用户说“血压有点高，饮食要注意什么”。两路结果通过加权 RRF 融合，再可选用 BGE reranker 精排，最后把 top-k 知识带引用注入 LLM，降低幻觉。
 
 记忆系统分为短期会话记忆、中期健康事件记忆和长期用户画像。用户画像包括年龄、健康目标、过敏史、饮食偏好、慢性病和运动能力，用于个性化建议。
 

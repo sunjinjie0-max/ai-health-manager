@@ -154,8 +154,54 @@ async def test_vector_memory_search_skips_dimension_mismatch():
     assert results == []
 
 
+@pytest.mark.asyncio
+async def test_single_value_memory_supersedes_previous_active_value():
+    manager = LongTermMemory()
+    manager._client = AsyncMock()
+
+    await manager._supersede_conflicting_memories(
+        {
+            "id": "new-memory",
+            "user_id": "user-1",
+            "slot": "exercise_frequency",
+        }
+    )
+
+    manager._client.update_by_query.assert_awaited_once()
+    call = manager._client.update_by_query.await_args
+    assert call.kwargs["index"] == manager.index_name
+    filters = call.kwargs["body"]["query"]["bool"]["filter"]
+    assert {"term": {"user_id": "user-1"}} in filters
+    assert {"term": {"slot": "exercise_frequency"}} in filters
+
+
+def test_llm_memory_rejects_inferred_diagnosis_without_explicit_evidence():
+    manager = LongTermMemory()
+
+    doc = manager._normalize_llm_memory_item(
+        user_id="user-1",
+        session_id="session-1",
+        user_message="我晚上喝牛奶容易肚子不舒服。",
+        assistant_response="",
+        item={
+            "domain": "nutrition",
+            "topic": "food_reaction",
+            "memory_type": "constraint",
+            "slot": "diet_constraint",
+            "value": "乳糖不耐受",
+            "content": "用户可能存在乳糖不耐受。",
+            "confidence": 0.9,
+            "salience": 0.8,
+            "evidence": "晚上喝牛奶容易肚子不舒服",
+        },
+    )
+
+    assert doc is None
+
+
 def test_should_call_llm_supplement_for_complex_multi_domain_message(monkeypatch):
     monkeypatch.setattr(settings, "memory_use_llm_supplement", True)
+    monkeypatch.setattr(settings, "deepseek_api_key", "test-key")
     manager = LongTermMemory()
 
     should_call = manager._should_call_llm_supplement(
@@ -170,6 +216,7 @@ def test_should_call_llm_supplement_for_complex_multi_domain_message(monkeypatch
 async def test_store_user_message_memories_merges_llm_supplement(monkeypatch):
     monkeypatch.setattr(settings, "elasticsearch_url", "http://memory-es:9200")
     monkeypatch.setattr(settings, "memory_use_llm_supplement", True)
+    monkeypatch.setattr(settings, "deepseek_api_key", "test-key")
     manager = LongTermMemory()
     captured_docs = []
 
@@ -180,15 +227,15 @@ async def test_store_user_message_memories_merges_llm_supplement(monkeypatch):
                 "memories": [
                     {
                         "domain": "nutrition",
-                        "topic": "intolerance",
+                        "topic": "food_reaction",
                         "memory_type": "constraint",
                         "slot": "diet_constraint",
-                        "value": "乳糖不耐受",
-                        "content": "用户可能存在乳糖不耐受。",
+                        "value": "喝牛奶后容易肚子不舒服",
+                        "content": "用户晚上喝牛奶后容易肚子不舒服。",
                         "confidence": 0.84,
                         "salience": 0.86,
                         "evidence": "晚上喝牛奶容易肚子不舒服",
-                        "tags": ["nutrition", "constraint", "乳糖不耐受"],
+                        "tags": ["nutrition", "constraint", "food_reaction"],
                     }
                 ]
             }
@@ -208,4 +255,8 @@ async def test_store_user_message_memories_merges_llm_supplement(monkeypatch):
     )
 
     assert stored_ids
-    assert any(doc["slot"] == "diet_constraint" and doc["value"] == "乳糖不耐受" for doc in captured_docs)
+    assert any(
+        doc["slot"] == "diet_constraint"
+        and doc["value"] == "喝牛奶后容易肚子不舒服"
+        for doc in captured_docs
+    )

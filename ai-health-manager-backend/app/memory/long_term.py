@@ -101,8 +101,18 @@ DAY_PREFERENCE_ALIASES = {
 }
 GOAL_WORDS = ("减脂", "减重", "增肌", "控糖", "控压", "降压", "改善睡眠", "调作息")
 CONDITION_WORDS = ("高血压", "糖尿病", "高血脂", "哮喘", "痛风", "胃病", "失眠")
+DIAGNOSTIC_TERMS = CONDITION_WORDS + ("乳糖不耐受", "食物不耐受", "过敏", "抑郁症", "焦虑症")
 STRUCTURED_PROFILE_MEMORY_TYPES = {"profile", "allergy", "condition", "goal"}
 STRUCTURED_PROFILE_SLOTS = {"age", "gender", "allergy", "condition", "health_condition", "health_goal"}
+ALLOWED_SEMANTIC_MEMORY_TYPES = {"habit", "constraint", "preference", "avoidance", "fact"}
+ALLOWED_MEMORY_DOMAINS = {"exercise", "nutrition", "sleep", "lifestyle", "general_health"}
+SINGLE_VALUE_MEMORY_SLOTS = {
+    "exercise_frequency",
+    "sleep_time",
+    "wake_time",
+    "sleep_pattern",
+    "meal_pattern",
+}
 DOMAIN_KEYWORDS = {
     "exercise": EXERCISE_KEYWORDS + ("力量训练", "慢跑"),
     "nutrition": ("饮食", "吃", "早餐", "晚饭", "夜宵", "燕麦", "鸡蛋", "牛奶", "香菜", "低盐", "控糖", "素食"),
@@ -125,6 +135,10 @@ MEMORY_SOURCE_FIELDS = [
     "evidence",
     "tags",
     "salience",
+    "extraction_source",
+    "status",
+    "valid_from",
+    "valid_to",
     "created_at",
     "updated_at",
 ]
@@ -330,6 +344,10 @@ class LongTermMemory:
                     "evidence": evidence,
                     "tags": tags or [topic],
                     "salience": salience,
+                    "extraction_source": "rule",
+                    "status": "active",
+                    "valid_from": utc_isoformat(),
+                    "valid_to": None,
                     "created_at": utc_isoformat(),
                     "updated_at": utc_isoformat(),
                 }
@@ -409,7 +427,7 @@ class LongTermMemory:
         return merged_docs
 
     def _should_call_llm_supplement(self, user_message: str, existing_docs: list[dict]) -> bool:
-        if not settings.memory_use_llm_supplement:
+        if not settings.memory_use_llm_supplement or not settings.deepseek_api_key:
             return False
 
         normalized = re.sub(r"\s+", " ", str(user_message or "")).strip()
@@ -497,15 +515,26 @@ class LongTermMemory:
 
         if not topic or not slot:
             return None
+        if domain not in ALLOWED_MEMORY_DOMAINS:
+            return None
+        if memory_type not in ALLOWED_SEMANTIC_MEMORY_TYPES:
+            return None
         if memory_type in STRUCTURED_PROFILE_MEMORY_TYPES or slot in STRUCTURED_PROFILE_SLOTS:
             return None
         if confidence < 0.7:
+            return None
+        if not evidence or evidence not in user_message:
+            return None
+        if any(marker in evidence for marker in ("今天", "这周", "本周", "最近一次", "暂时")):
             return None
         if not value:
             value = self._extract_value_from_content(content)
         if not content:
             content = self._build_content_from_slot(slot, value or evidence)
         if not value or not content:
+            return None
+        if any(term in content for term in DIAGNOSTIC_TERMS) and str(value) not in evidence:
+            # Do not turn symptoms or food reactions into an inferred diagnosis.
             return None
 
         return {
@@ -524,6 +553,10 @@ class LongTermMemory:
             "evidence": evidence,
             "tags": tags or [topic],
             "salience": salience,
+            "extraction_source": "llm",
+            "status": "active",
+            "valid_from": utc_isoformat(),
+            "valid_to": None,
             "created_at": utc_isoformat(),
             "updated_at": utc_isoformat(),
         }
@@ -558,11 +591,16 @@ class LongTermMemory:
                 "evidence": doc.get("evidence", doc.get("source_message", "")),
                 "tags": doc.get("tags", []),
                 "salience": float(doc.get("salience") or 0.5),
+                "extraction_source": doc.get("extraction_source", "rule"),
+                "status": doc.get("status", "active"),
+                "valid_from": doc.get("valid_from") or utc_isoformat(),
+                "valid_to": doc.get("valid_to"),
                 "created_at": doc.get("created_at") or utc_isoformat(),
                 "updated_at": utc_isoformat(),
                 "embedding": embedding,
             }
             try:
+                await self._supersede_conflicting_memories(indexed_doc)
                 await self._client.index(
                     index=self.index_name,
                     id=doc["id"],
@@ -588,6 +626,59 @@ class LongTermMemory:
         if indexed_ids:
             await self._client.indices.refresh(index=self.index_name)
         return indexed_ids
+
+    async def _supersede_conflicting_memories(self, memory_doc: dict) -> None:
+        """Expire the previous active value for singleton memory slots."""
+        slot = str(memory_doc.get("slot") or "")
+        user_id = str(memory_doc.get("user_id") or "")
+        memory_id = str(memory_doc.get("id") or "")
+        if slot not in SINGLE_VALUE_MEMORY_SLOTS or not user_id or not memory_id:
+            return
+
+        superseded_at = utc_isoformat()
+        body = {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {"term": {"user_id": user_id}},
+                        {"term": {"slot": slot}},
+                        {
+                            "bool": {
+                                "should": [
+                                    {"term": {"status": "active"}},
+                                    {"bool": {"must_not": {"exists": {"field": "status"}}}},
+                                ],
+                                "minimum_should_match": 1,
+                            }
+                        },
+                    ],
+                    "must_not": [{"term": {"_id": memory_id}}],
+                }
+            },
+            "script": {
+                "source": (
+                    "ctx._source.status = params.status; "
+                    "ctx._source.valid_to = params.valid_to; "
+                    "ctx._source.updated_at = params.valid_to"
+                ),
+                "lang": "painless",
+                "params": {"status": "superseded", "valid_to": superseded_at},
+            },
+        }
+        try:
+            await self._client.update_by_query(
+                index=self.index_name,
+                body=body,
+                conflicts="proceed",
+                refresh=False,
+            )
+        except Exception:
+            # Keep the new write available, but make the conflict failure visible in logs.
+            logger.exception(
+                "[long_term_memory] failed to supersede prior memory user=%s slot=%s",
+                user_id,
+                slot,
+            )
 
     async def _connect(self):
         if self._client is not None:
@@ -639,6 +730,10 @@ class LongTermMemory:
                     "evidence": {"type": "text"},
                     "tags": {"type": "keyword"},
                     "salience": {"type": "float"},
+                    "extraction_source": {"type": "keyword"},
+                    "status": {"type": "keyword"},
+                    "valid_from": {"type": "date"},
+                    "valid_to": {"type": "date"},
                     "created_at": {"type": "date"},
                     "updated_at": {"type": "date"},
                     "embedding": {
@@ -683,7 +778,10 @@ class LongTermMemory:
             "_source": MEMORY_SOURCE_FIELDS,
             "query": {
                 "bool": {
-                    "filter": [{"term": {"user_id": user_id}}],
+                    "filter": [
+                        {"term": {"user_id": user_id}},
+                        self._active_memory_filter(),
+                    ],
                     "must": {
                         "multi_match": {
                             "query": query,
@@ -718,7 +816,14 @@ class LongTermMemory:
                 "query_vector": query_vector,
                 "k": max(limit, self.candidate_k),
                 "num_candidates": max(self.candidate_k * 5, 60),
-                "filter": {"term": {"user_id": user_id}},
+                "filter": {
+                    "bool": {
+                        "filter": [
+                            {"term": {"user_id": user_id}},
+                            self._active_memory_filter(),
+                        ]
+                    }
+                },
             },
         }
         try:
@@ -733,6 +838,18 @@ class LongTermMemory:
             )
             return []
         return [self._memory_hit_to_message(hit, "vector") for hit in response["hits"]["hits"]]
+
+    def _active_memory_filter(self) -> dict:
+        """Read active memories while remaining compatible with old documents."""
+        return {
+            "bool": {
+                "should": [
+                    {"term": {"status": "active"}},
+                    {"bool": {"must_not": {"exists": {"field": "status"}}}},
+                ],
+                "minimum_should_match": 1,
+            }
+        }
 
     def _fuse_ranked_results(
         self,
@@ -777,6 +894,10 @@ class LongTermMemory:
                 "evidence": source.get("evidence"),
                 "tags": source.get("tags") or [],
                 "salience": source.get("salience"),
+                "extraction_source": source.get("extraction_source"),
+                "status": source.get("status", "active"),
+                "valid_from": source.get("valid_from"),
+                "valid_to": source.get("valid_to"),
                 "source_message": source.get("source_message"),
             },
             "raw_score": hit.get("_score", 0.0),

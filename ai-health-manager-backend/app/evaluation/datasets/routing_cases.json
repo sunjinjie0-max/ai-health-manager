@@ -2,12 +2,17 @@
   {
     "id": "routing_nutrition",
     "query": "今天午餐吃了炸鸡、米饭和奶茶，帮我分析一下饮食是否健康。",
-    "tags": ["routing", "nutrition"],
+    "tags": [
+      "routing",
+      "nutrition"
+    ],
     "expected": {
       "intent": "nutrition",
       "urgent": false,
       "prompt_injection": false,
-      "task_agents": ["nutrition"]
+      "task_agents": [
+        "nutrition"
+      ]
     }
   },
   {
@@ -18,36 +23,648 @@
         "fitness_level": "beginner"
       }
     },
-    "tags": ["routing", "environment", "exercise"],
+    "tags": [
+      "routing",
+      "environment",
+      "exercise"
+    ],
     "expected": {
       "intent": "exercise",
       "urgent": false,
       "prompt_injection": false,
-      "task_agents": ["environment", "exercise"]
+      "task_agents": [
+        "environment",
+        "exercise"
+      ]
     }
   },
   {
     "id": "routing_exercise_only",
     "query": "我想做30分钟居家力量训练，帮我安排一下。",
-    "tags": ["routing", "exercise"],
+    "tags": [
+      "routing",
+      "exercise"
+    ],
     "expected": {
       "intent": "exercise",
       "urgent": false,
       "prompt_injection": false,
-      "task_agents": ["exercise"]
+      "task_agents": [
+        "exercise"
+      ]
     }
   },
   {
     "id": "routing_rag_only",
     "query": "成年人建议多大的身体活动量？",
-    "tags": ["routing", "rag"],
+    "tags": [
+      "routing",
+      "rag"
+    ],
     "expected": {
       "intent": "exercise",
       "urgent": false,
       "prompt_injection": false,
-      "task_agents": ["exercise"],
+      "task_agents": [
+        "exercise"
+      ],
       "memory_scope": "rag_only",
       "needs_rag": true
+    }
+  },
+  {
+    "id": "routing_nutrition_exercise_gain",
+    "query": "我想增肌，训练后吃什么比较好？",
+    "tags": [
+      "routing",
+      "nutrition",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition",
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "routing_environment_only_weather_aqi",
+    "query": "杭州明天天气和空气质量怎么样？",
+    "tags": [
+      "routing",
+      "environment"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ]
+    }
+  },
+  {
+    "id": "routing_symptom_without_specialist",
+    "query": "我头疼咳嗽两天了，需要注意什么？",
+    "tags": [
+      "routing",
+      "symptom"
+    ],
+    "expected": {
+      "intent": "symptom_check",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": []
+    }
+  },
+  {
+    "id": "routing_low_sodium_nutrition",
+    "query": "血压偏高，饮食怎么做到低盐？",
+    "tags": [
+      "routing",
+      "nutrition",
+      "hypertension"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_01",
+    "query": "早餐吃燕麦和牛奶，帮我分析营养是否均衡。",
+    "tags": [
+      "routing",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_02",
+    "query": "早餐吃鸡胸肉和米饭，帮我分析营养是否均衡。",
+    "tags": [
+      "routing",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_03",
+    "query": "早餐吃豆腐和蔬菜，帮我分析营养是否均衡。",
+    "tags": [
+      "routing",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_04",
+    "query": "早餐吃面包和酸奶，帮我分析营养是否均衡。",
+    "tags": [
+      "routing",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_05",
+    "query": "早餐吃鱼肉和杂粮，帮我分析营养是否均衡。",
+    "tags": [
+      "routing",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_06",
+    "query": "早餐吃鸡蛋和水果，帮我分析营养是否均衡。",
+    "tags": [
+      "routing",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_07",
+    "query": "早餐吃牛肉和土豆，帮我分析营养是否均衡。",
+    "tags": [
+      "routing",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_08",
+    "query": "早餐吃坚果和豆浆，帮我分析营养是否均衡。",
+    "tags": [
+      "routing",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_09",
+    "query": "我想做30分钟居家力量训练，请帮我安排。",
+    "tags": [
+      "routing",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_10",
+    "query": "我想做30分钟户外慢跑，请帮我安排。",
+    "tags": [
+      "routing",
+      "environment",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_11",
+    "query": "我想做30分钟瑜伽拉伸，请帮我安排。",
+    "tags": [
+      "routing",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_12",
+    "query": "我想做30分钟低冲击有氧，请帮我安排。",
+    "tags": [
+      "routing",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_13",
+    "query": "我想做30分钟核心训练，请帮我安排。",
+    "tags": [
+      "routing",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_14",
+    "query": "我想做30分钟快走运动，请帮我安排。",
+    "tags": [
+      "routing",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_15",
+    "query": "我想做30分钟上肢力量训练，请帮我安排。",
+    "tags": [
+      "routing",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_16",
+    "query": "我想做30分钟减脂运动，请帮我安排。",
+    "tags": [
+      "routing",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_17",
+    "query": "北京今天的天气和空气质量怎么样？",
+    "tags": [
+      "routing",
+      "environment"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_18",
+    "query": "上海今天的天气和空气质量怎么样？",
+    "tags": [
+      "routing",
+      "environment"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_19",
+    "query": "广州今天的天气和空气质量怎么样？",
+    "tags": [
+      "routing",
+      "environment"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_20",
+    "query": "深圳今天的天气和空气质量怎么样？",
+    "tags": [
+      "routing",
+      "environment"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_21",
+    "query": "杭州今天的天气和空气质量怎么样？",
+    "tags": [
+      "routing",
+      "environment"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_22",
+    "query": "成都今天的天气和空气质量怎么样？",
+    "tags": [
+      "routing",
+      "environment"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_23",
+    "query": "南京今天的天气和空气质量怎么样？",
+    "tags": [
+      "routing",
+      "environment"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_24",
+    "query": "武汉今天的天气和空气质量怎么样？",
+    "tags": [
+      "routing",
+      "environment"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_25",
+    "query": "北京今天空气怎么样，我想户外跑步30分钟是否合适？",
+    "tags": [
+      "routing",
+      "environment",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_26",
+    "query": "上海今天空气怎么样，我想户外跑步30分钟是否合适？",
+    "tags": [
+      "routing",
+      "environment",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_27",
+    "query": "广州今天空气怎么样，我想户外跑步30分钟是否合适？",
+    "tags": [
+      "routing",
+      "environment",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_28",
+    "query": "深圳今天空气怎么样，我想户外跑步30分钟是否合适？",
+    "tags": [
+      "routing",
+      "environment",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_29",
+    "query": "杭州今天空气怎么样，我想户外跑步30分钟是否合适？",
+    "tags": [
+      "routing",
+      "environment",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_30",
+    "query": "成都今天空气怎么样，我想户外跑步30分钟是否合适？",
+    "tags": [
+      "routing",
+      "environment",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_31",
+    "query": "南京今天空气怎么样，我想户外跑步30分钟是否合适？",
+    "tags": [
+      "routing",
+      "environment",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ]
+    }
+  },
+  {
+    "id": "expanded_routing_32",
+    "query": "武汉今天空气怎么样，我想户外跑步30分钟是否合适？",
+    "tags": [
+      "routing",
+      "environment",
+      "exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ]
     }
   }
 ]

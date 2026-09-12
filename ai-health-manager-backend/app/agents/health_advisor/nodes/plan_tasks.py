@@ -137,7 +137,7 @@ async def plan_tasks(state: HealthAdvisorState) -> HealthAdvisorState:
                 agent_name="nutrition",
                 task_type="meal_analysis",
                 payload={"description": user_message},
-                timeout_seconds=20,
+                timeout_seconds=60,
                 retry=1,
             )
         )

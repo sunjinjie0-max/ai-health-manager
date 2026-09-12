@@ -425,6 +425,7 @@ class HealthAdvisorState(TypedDict):
     user_profile: dict                   # 用户画像(从Redis/PG加载)
     chat_history: list[dict]             # 短期记忆(最近10轮)
     relevant_memories: list[dict]        # 按路由策略加载的长期记忆结果
+    pending_profile_confirmations: list[dict] # session级待确认高风险画像候选
     rag_context: list[dict]              # RAG知识库检索结果
     assembled_context: dict              # 分区后的Prompt上下文
     context_trace: dict                  # 各分区token用量、压缩和丢弃记录
@@ -436,6 +437,7 @@ class HealthAdvisorState(TypedDict):
     sub_agent_tasks: list[dict]          # 需要分发给子Agent的任务
     sub_agent_results: list[dict]        # 子Agent返回的结果
     tool_trace: list[dict]               # 工具调用日志(status/latency/source/error)
+    profile_extraction_trace: dict        # 规则/LLM候选、拒绝原因与确认状态
 
     # 输出
     response: str                        # 最终回复
@@ -628,7 +630,7 @@ def build_health_advisor_graph():
 
 只有当 `memory_policy.needs_long_term = true` 时，才触发跨会话记忆检索。长期记忆只保存非结构化或半结构化的稳定事实、偏好、习惯和约束，例如“用户习惯周六跑步”“用户早餐常不规律”。这些信息会写入 ES 向量索引，查询时按 `user_id` 过滤后执行 `DashScope Embedding 向量检索 + BM25 检索 + RRF 融合`；如果 ES 不可用，再回退到数据库时间窗口候选 + 关键词相关性排序，保证链路可用性。
 
-结构化画像不写入 ES 作为主存储，而是写入 PostgreSQL 的 `user_profiles` 表。例如年龄、性别、过敏、慢病、健康目标、饮食偏好等稳定字段会在后处理阶段合并到结构化画像中，后续由 `load_context` 读取并注入 Agent 上下文。
+结构化画像不写入 ES 作为主存储，而是写入 PostgreSQL 的 `user_profiles` 表。例如年龄、性别、过敏、慢病、健康目标等稳定字段会在后处理阶段合并到结构化画像中，后续由 `load_context` 读取并注入 Agent 上下文。抽取采用“规则优先、LLM 补充、程序校验”的混合策略：规则负责数值、时间、频率和明确实体，LLM 只补充规则未覆盖的复杂语义并输出候选 JSON；候选必须经过 Schema、原文证据、置信度、去重和冲突校验后才能写入。过敏、慢病、用药、妊娠状态和运动禁忌等高风险字段不会静默写入，需经用户确认。
 
 ```python
 INTENT_CLASSIFY_PROMPT = """
@@ -791,8 +793,8 @@ RAG文档: 3000
 |------|------|
 | 免责声明 | 涉及健康建议的回复末尾附加免责提示 |
 | 推荐追问 | 基于当前对话上下文生成3个推荐追问 |
-| 画像提取与写入 | 从本轮对话提取结构化画像字段，异步触发后台任务合并写入 PostgreSQL |
-| 记忆写入 | 将本轮对话写入进程内短期记忆；将非结构化偏好、习惯、约束写入 ES 长期记忆 |
+| 画像提取与写入 | 规则抽取确定性字段，LLM 补充复杂语义；经 Schema、证据、置信度与冲突校验后异步写入 PostgreSQL，高风险字段先进入待确认队列 |
+| 记忆写入 | 将本轮对话写入进程内短期记忆；将通过校验的非结构化偏好、习惯、约束写入 ES，冲突旧记忆标记为 `superseded` |
 
 ##### 3.2.1.4 工具注册
 
@@ -2051,35 +2053,74 @@ AQI超过150时建议改为室内运动。"
 
 #### 3.3.4 Agent通信协议
 
-编排层与子Agent之间通过标准化的消息格式通信,所有消息携带traceId用于链路追踪:
+编排层与子Agent之间通过标准化的 Pydantic 消息模型通信，所有请求、响应和任务节点都携带
+`trace_id`，用于贯穿主Agent、子Agent、工具调用、RAG检索和日志链路。
+
+> 说明：Agent通信协议采用面向工程运行的完整消息模型。实际实现中使用
+> `trace_id + task_id` 关联一次用户请求下的多个子任务，目标Agent字段统一命名为
+> `agent_name`，结构化结果字段统一命名为 `result`，耗时信息主要通过日志、
+> Langfuse Trace 和 `metadata.tool_trace` 记录。
 
 **请求消息(编排层 → 子Agent)**:
 
 ```python
-@dataclass
-class AgentRequest:
-    request_id: str              # 唯一请求ID
-    trace_id: str                # 链路追踪ID(整个用户请求共享)
-    agent: str                   # 目标Agent名称
-    payload: dict                # 任务负载(user_message, attachments, user_profile等)
-    prior_results: dict | None   # 前序Agent的结果(用于依赖注入)
-    timeout: int = 30            # 超时秒数
-    priority: str = "normal"     # high | normal | low
+class AgentRequest(BaseModel):
+    trace_id: str = ""                         # 链路追踪ID，整个用户请求共享
+    user_id: str = "anonymous"                 # 当前用户ID
+    session_id: str = ""                       # 当前会话ID
+    agent_name: str                            # 目标Agent名称，如 nutrition / exercise
+    task_type: str = "default"                 # 子任务类型，如 plan / advice / query
+    user_message: str = ""                     # 原始用户问题
+    payload: dict[str, Any] = {}               # 任务负载，如结构化参数、工具输入
+    user_profile: dict[str, Any] = {}          # PostgreSQL结构化用户画像
+    chat_history: list[dict[str, Any]] = []    # 短期会话上下文
+    relevant_memories: list[dict[str, Any]] = [] # ES长期记忆检索结果
+    prior_results: dict[str, Any] = {}         # 前序Agent结果，用于依赖注入
+    deadline_ms: int = 30000                   # 编排层传入的截止时间
+    locale: str = "zh-CN"                      # 语言和地域偏好
 ```
 
 **响应消息(子Agent → 编排层)**:
 
 ```python
-@dataclass
-class AgentResponse:
-    request_id: str              # 对应的请求ID
-    agent: str                   # 响应Agent名称
-    status: str                  # "success" | "error" | "timeout"
-    data: dict | None            # 成功时的结构化结果
-    error: str | None            # 失败时的错误信息
-    duration_ms: int             # 执行耗时(毫秒)
-    metadata: dict               # 额外元数据(如调用了哪些工具)
+AgentStatus = Literal["success", "partial", "failed", "timeout", "skipped"]
+
+class AgentResponse(BaseModel):
+    trace_id: str = ""                         # 链路追踪ID
+    agent_name: str                            # 响应Agent名称
+    task_type: str = "default"                 # 对应任务类型
+    status: AgentStatus = "success"            # 执行状态
+    result: dict[str, Any] = {}                # 成功或部分成功时的结构化结果
+    summary: str = ""                          # 子Agent可读摘要，便于主Agent聚合
+    confidence: float | None = None            # 子Agent对结果可靠性的估计
+    citations: list[dict[str, Any]] = []       # RAG或外部资料引用
+    warnings: list[str] = []                   # 风险提示、降级说明
+    suggested_questions: list[str] = []        # 子Agent推荐追问
+    error: dict[str, Any] | None = None        # 失败时的结构化错误
+    metadata: dict[str, Any] = {}              # 扩展元数据，如 tool_trace / latency
 ```
+
+**任务节点(编排层内部DAG)**:
+
+```python
+class AgentTask(BaseModel):
+    task_id: str                               # 编排层内部任务ID
+    agent_name: str                            # 需要调用的子Agent
+    task_type: str = "default"                 # 子任务类型
+    payload: dict[str, Any] = {}               # 子任务输入参数
+    depends_on: list[str] = []                 # 依赖的前序任务ID
+    required: bool = False                     # 是否为必须成功的任务
+    timeout_seconds: int | None = None         # 单任务超时时间
+    retry: int = 0                             # 失败重试次数
+```
+
+**协议设计要点**:
+
+- `AgentRequest` 负责把用户问题、画像、短期上下文、长期记忆、前序Agent结果和本次任务参数统一传给子Agent。
+- `AgentTask` 描述编排层内部的任务DAG，解决“哪些子Agent并行、哪些子Agent依赖前序结果、失败是否影响主流程”的问题。
+- `AgentResponse` 既返回机器可读的 `result`，也返回主Agent聚合时可直接使用的 `summary / warnings / citations / suggested_questions`。
+- 子Agent工具调用链路通过 `metadata.tool_trace` 回传给主Agent，便于统一观测工具白名单、调用耗时、失败原因和降级策略。
+- `status=partial` 表示子Agent部分能力可用，例如天气API成功但空气质量API失败；`status=skipped` 表示编排层根据意图或依赖关系跳过该Agent。
 
 #### 3.3.5 协作流程示例
 
@@ -2302,7 +2343,7 @@ ContextAssembler输出:
 | 非结构化偏好/习惯 | “我习惯周六跑步”“早餐经常不规律”“一忙就忘记喝水” | Elasticsearch 长期记忆索引 | 跨会话语义检索、回忆用户历史习惯 |
 | 当前会话短期上下文 | 最近几轮追问和回答 | 进程内短期记忆 | 解决同一 session 内的“刚才/前面提到”追问 |
 
-用户画像通过对话自动提取，不需要用户主动填写表单。当前实现采用规则抽取为主，后续可接入 LLM 结构化抽取增强。
+用户画像通过对话自动提取，不需要用户主动填写表单。当前实现采用 **规则优先、LLM 补充、程序校验** 的混合抽取策略：规则优先提取年龄、身高、体重、时间、频率、明确疾病名和过敏原等确定性信息；当消息包含规则未覆盖的复杂或隐含表达时，DeepSeek 分别按结构化画像与语义记忆的固定 JSON Schema 返回候选，两个提取器按需触发并独立校验。LLM 无权直接写数据库或 ES，所有候选都必须经过字段白名单、类型与取值范围、原文证据、置信度、去重、稳定性和冲突检查。
 
 ```
 用户发送消息
@@ -2311,24 +2352,59 @@ Agent生成回复(正常对话流程)
     ↓
 post_process 后处理
     ↓
-┌──────────────────────────────────┐
-│  画像与长期记忆写入Pipeline       │
-│                                  │
-│  1. 从用户消息中抽取结构化画像字段 │
-│     basic_info / health_status    │
-│     lifestyle / health_goals      │
-│     diet_preferences              │
-│     ↓                            │
-│  2. 合并写入PostgreSQL            │
-│     user_profiles                 │
-│     ↓                            │
-│  3. 抽取非结构化长期事实          │
-│     habit / preference            │
-│     constraint                    │
-│     ↓                            │
-│  4. 写入Elasticsearch长期记忆索引 │
-└──────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  画像与长期记忆写入 Pipeline             │
+│                                         │
+│  1. 规则抽取确定性字段与稳定事实         │
+│     ↓                                   │
+│  2. LLM按画像/语义记忆Schema分别补充候选 │
+│     按需触发，只返回JSON，不直接写存储   │
+│     ↓                                   │
+│  3. 统一候选校验                         │
+│     Schema / 字段白名单 / 原文证据       │
+│     置信度 / 稳定性 / 去重 / 冲突        │
+│     ↓                                   │
+│  4. 高风险结构化字段进入待确认队列       │
+│     allergy / condition / medication     │
+│     pregnancy / exercise_restriction     │
+│     ↓                                   │
+│  5. 低风险画像与已确认高风险字段         │
+│     合并写入PostgreSQL user_profiles     │
+│     ↓                                   │
+│  6. 非结构化稳定事实写入ES长期记忆索引   │
+│     新值生效，冲突旧值标记superseded     │
+└─────────────────────────────────────────┘
 ```
+
+**候选信息统一元数据**:
+
+```json
+{
+  "section": "lifestyle",
+  "field": "exercise_frequency",
+  "value": "每周3次",
+  "source": "rule | llm",
+  "confidence": 0.88,
+  "evidence": "我现在一般每周跑三次",
+  "requires_confirmation": false
+}
+```
+
+系统只接受能够在用户原文中找到证据的候选。LLM 不得根据症状推断诊断，例如用户说“喝牛奶后肚子不舒服”时，只能记录该现象或饮食约束，不能自动写成“乳糖不耐受”。一次性状态（如“今天没睡好”）保留在短期上下文或带有效期的健康事件中，不写入永久长期记忆。
+
+**高风险确认机制**:
+
+- 过敏、慢病、用药、妊娠状态和运动禁忌等字段抽取后先保存为 session 级待确认候选。
+- Agent 在当前回复末尾给出简短确认问题；用户明确回复“确认/记录”后才写入 PostgreSQL。
+- 用户回复“不是/不要记录”时删除候选；未确认候选不参与后续个性化建议。
+- 用户直接上传并确认的健康档案属于显式授权写入，不重复发起对话确认。
+
+**冲突与版本处理**:
+
+- 标量画像字段使用新值覆盖旧值，同时递增 `user_profiles.version`。
+- 列表字段追加去重，显式删除指令移除对应值。
+- ES 中运动频率、睡眠时间等单值槽位出现新值时，新记录标记为 `active`，同一用户同一槽位的旧记录标记为 `superseded` 并写入 `valid_to`。
+- 每条候选和最终记忆保留 `source_message`、`evidence`、`confidence`、`created_at/updated_at`，便于审计和错误回溯。
 
 **画像抽取结果示例**:
 
@@ -3212,18 +3288,64 @@ Agent生成调用意图
 | **编排评估** | Agent调度、任务规划、结果聚合 | 验证多Agent协作效果 |
 | **端到端评估** | 用户完整咨询流程 | 验证最终用户体验与安全性 |
 
-#### 11.1.3 样本集设计
+#### 11.1.3 样本集构造方法
 
-评测集按真实业务场景构建,覆盖以下类别:
+评测样本集不只依赖人工随手编写,而是按“业务场景拆解 -> 样本来源收集 -> 标注期望行为 -> 自动校验 -> 人工复核 -> 失败回流”的流程沉淀。
+
+**1. 样本来源**
+
+| 来源 | 生成方式 | 用途 |
+|------|----------|------|
+| **权威知识文档** | 从健康指南、运动指南、慢病管理资料、睡眠建议、环境健康资料中抽取问答点 | 构造RAG命中、引用准确性、回答忠实度样本 |
+| **产品核心路径** | 按健康问答、饮食分析、运动计划、环境运动规划、多轮记忆等功能枚举用户任务 | 覆盖主链路和多Agent协作链路 |
+| **真实/模拟对话日志** | 对用户问题脱敏、聚类,抽取高频问题和失败问题 | 构造更贴近用户表达的回归样本 |
+| **人工专家标注** | 对高风险健康、慢病、运动禁忌、饮食限制等样本标注期望行为 | 保证健康安全边界和专业性 |
+| **LLM辅助扩写** | 基于种子问题生成同义问、口语化表达、错别字、上下文追问 | 扩大表达多样性,用于路由和记忆测试 |
+| **对抗样本** | 构造Prompt注入、越权请求、医疗诊断/处方请求、RAG污染片段 | 验证安全策略和上下文隔离能力 |
+| **线上失败回流** | 将低分反馈、工具失败、检索未命中、人工判差样本加入回归集 | 防止同类问题反复出现 |
+
+**2. 样本标注字段**
+
+每条评测样本使用JSON结构维护,核心字段包括:
+
+```json
+{
+  "id": "rag_physical_activity_guideline",
+  "query": "建议多大的身体活动量？",
+  "tags": ["rag", "exercise"],
+  "profile": {"age": 30, "fitness_level": "beginner"},
+  "setup": {
+    "short_term_history": [],
+    "long_term_memories": []
+  },
+  "expected": {
+    "intent": "exercise",
+    "task_agents": ["exercise"],
+    "needs_rag": true,
+    "rag_doc_ids": ["physical_activity_guideline"],
+    "rag_context_terms": ["每周", "中等强度", "肌肉强化"],
+    "required_terms": ["循序渐进", "安全"],
+    "forbidden_terms": ["必须", "保证治愈"],
+    "min_citations": 1,
+    "max_latency_ms": 30000
+  },
+  "reference_response": "参考答案或人工标注要点"
+}
+```
+
+**3. 样本类别**
 
 | 类别 | 示例 | 关注点 |
 |------|------|--------|
-| **通用健康问答** | 感冒、睡眠、饮水、体重管理 | 回复质量、引用准确性 |
-| **营养场景** | 文本点餐、图片食物识别、一日三餐分析 | 食物抽取、营养计算、建议一致性 |
-| **环境场景** | AQI查询、天气影响、敏感人群提醒 | 工具调用正确率、风险判断 |
-| **运动场景** | 减脂计划、膝盖不适下的训练建议 | 安全约束、个性化程度 |
-| **高风险安全场景** | 胸痛、呼吸困难、中风征兆 | 紧急识别召回率、误放过率 |
-| **对抗样本** | Prompt注入、越权指令、脏OCR文本 | 防护命中率、误杀率 |
+| **通用健康问答** | 感冒、睡眠、饮水、体重管理 | 回复质量、引用准确性、免责声明 |
+| **营养场景** | 文本点餐、一日三餐分析、增肌饮食、控糖饮食 | 食物抽取、营养计算、建议一致性 |
+| **环境场景** | AQI查询、天气影响、敏感人群提醒、日期地点解析 | 工具调用正确率、风险判断、降级回复 |
+| **运动场景** | 减脂计划、膝盖不适下训练、结合天气安排跑步 | 安全约束、个性化程度、跨Agent依赖 |
+| **记忆场景** | 跨会话询问运动习惯、饮食偏好、过敏史、健康目标 | 短期/长期记忆路由、记忆召回、冲突处理 |
+| **RAG场景** | 身体活动量、高血压生活方式、睡眠建议 | Top-K命中、上下文忠实度、引用准确性 |
+| **高风险安全场景** | 胸痛、呼吸困难、中风征兆、自杀意念 | 紧急识别召回率、误放过率、安全兜底 |
+| **对抗样本** | Prompt注入、越权指令、脏OCR文本、RAG污染 | 防护命中率、误杀率、上下文边界 |
+| **工程异常场景** | 天气API失败、ES不可用、LLM超时、子Agent失败 | 降级策略、partial结果、失败可观测性 |
 
 #### 11.1.4 核心评估指标
 
@@ -3255,15 +3377,69 @@ Agent生成调用意图
 
 #### 11.1.5 评估执行流程
 
+评估分为三种执行模式: 离线确定性评测、真实端到端回放、人工抽检复核。
+
+**1. 离线确定性评测**
+
+适用于CI和日常开发回归,不强依赖外部LLM或线上数据。主要评估意图识别、安全规则、记忆路由、任务规划、固定候选答案关键词、RAG预置召回结果等。
+
 ```text
-构建评测样本集
-    -> 固化基线配置(Prompt/模型/工具配置)
-    -> 批量运行Agent工作流
-    -> 收集结构化结果与日志
-    -> 自动计算指标
-    -> 抽样人工评审
-    -> 与基线结果对比(版本管理阶段增强)
-    -> 决定是否上线
+准备JSON评测集
+    -> 加载 expected 标注
+    -> 执行 deterministic evaluator
+    -> 计算 intent / safety / memory / routing / response_terms 等指标
+    -> 生成 reports/eval-report.json
+    -> 将失败样本导出为 regression dataset
+```
+
+执行示例:
+
+```bash
+cd ai-health-manager-backend
+python3 -m app.evaluation.health_advisor \
+  --suite all \
+  --output reports/eval-report.json \
+  --export-failures reports/eval-failures.json \
+  --export-regression-dataset reports/regression-failed-cases.json
+```
+
+**2. 真实端到端回放**
+
+适用于发版前验证,会跑完整 `HealthAdvisorAgent` 图,真实经过安全检查、意图识别、记忆路由、RAG检索、子Agent编排、工具调用、答案生成和后处理。
+
+```text
+准备E2E样本
+    -> 初始化数据库/Redis/Elasticsearch/模型API
+    -> 注入短期历史和长期记忆
+    -> 调用完整HealthAdvisorAgent图
+    -> 收集 final_state、retrieved_docs、citations、tool_trace、latency、token_usage
+    -> 使用规则指标 + LLM Judge + Ragas评估
+```
+
+执行示例:
+
+```bash
+cd ai-health-manager-backend
+python3 -m app.evaluation.health_advisor \
+  --suite e2e_agent \
+  --e2e-agent \
+  --live-rag \
+  --llm-judge \
+  --ragas \
+  --output reports/e2e-eval-report.json
+```
+
+**3. 人工评审流程**
+
+人工评审不替代自动评测,主要负责判断“自动指标难以覆盖”的质量问题:
+
+```text
+自动评测产出报告
+    -> 按 failed_cases、低分LLM Judge、用户负反馈抽样
+    -> 人工标注准确性、完整性、安全性、可读性、个性化
+    -> 对争议样本进行双人复核
+    -> 更新 reference_response / required_terms / forbidden_terms
+    -> 将确认后的 bad case 回流到回归集
 ```
 
 #### 11.1.6 自动评测与人工评测结合
@@ -3274,14 +3450,58 @@ Agent生成调用意图
 - 工具调用成功率
 - 延迟、Token、成本
 - Prompt注入拦截率
+- RAG Top-K命中率、上下文关键词覆盖
+- LLM Judge评分: answer_relevancy、faithfulness、safety、citation_correctness
+- Ragas指标: answer_relevancy、faithfulness、context_precision、context_recall
 
 **人工评测适用项**:
 - 回复是否自然、易懂、有同理心
 - 个性化建议是否真正结合了用户画像
 - 多Agent聚合后的答案是否连贯
 - 免责声明是否合适,是否过度打断用户体验
+- 对复杂健康建议的专业性复核
+- 对bad case根因分类,判断是检索问题、Prompt问题、工具问题还是安全策略问题
 
-#### 11.1.7 扩展功能: 版本管理与回归评估
+#### 11.1.7 评估技术栈
+
+| 模块 | 技术栈 | 作用 |
+|------|--------|------|
+| **评测数据管理** | JSON Dataset、Python dataclass | 维护query、profile、setup、expected、reference_response等字段 |
+| **离线评测执行** | Python CLI、pytest、FastAPI工程内模块 | 批量执行评测集,适合CI和本地回归 |
+| **E2E回放** | LangGraph、HealthAdvisorAgent、PostgreSQL、Redis、Elasticsearch | 跑完整Agent链路,验证真实工程行为 |
+| **RAG评估** | Elasticsearch live RAG、Ragas | 评估召回、上下文精度、忠实度和回答相关性 |
+| **LLM Judge** | DeepSeek API | 对最终回答进行相关性、忠实度、安全性、引用准确性评分 |
+| **失败归因** | 规则归因 + LLM辅助归因 | 对失败case输出根因、修复建议、是否回流数据集 |
+| **可观测性** | Python logging、Langfuse、reports/*.json | 记录trace、token、latency、tool_trace、failed_metrics |
+
+#### 11.1.8 当前代码评测集覆盖情况
+
+当前代码已经具备评测框架和一套 240 条的分层回归数据集,内置样本位于 `ai-health-manager-backend/app/evaluation/datasets/`。其中保留 50 条人工核心种子用例,并通过 `scripts/generate_evaluation_datasets.py` 可重复生成 190 条场景扩展用例:
+
+| 数据集 | 当前样本数 | 覆盖内容 |
+|--------|------------|----------|
+| `health_advisor_cases.json` | 40 | 睡眠、营养、运动、环境、症状、生活方式综合问答 |
+| `safety_cases.json` | 40 | 急症、自伤、Prompt注入、诊断与处方边界 |
+| `routing_cases.json` | 40 | 单Agent、多Agent、纯RAG与无需专业Agent的路由 |
+| `memory_cases.json` | 40 | short-only、long-only、short+RAG、long+RAG |
+| `rag_cases.json` | 50 | 文档命中、topic命中、证据词覆盖与引用基础 |
+| `e2e_agent_cases.json` | 30 | 完整工作流、Agent编排、记忆、RAG与安全边界 |
+| **合计** | **240** | **50条人工核心种子 + 190条场景扩展** |
+
+测试会校验每个套件的精确数量、case ID全局唯一、query和tags非空,并执行全部240条离线确定性评测。生成脚本会先移除旧的 `expanded_` 样例再按固定模板重建,因此可重复执行且不会不断追加重复数据。
+
+结论: 当前240条case能够验证核心评测链路并提供稳定回归覆盖,但仍属于项目内自建离线集,不是大规模线上分布或专家临床评测集。后续需要继续补充更难的真实失败样本和工程异常注入:
+
+- 营养细分: 增肌、减脂、控糖、低钠、过敏、慢病饮食、份量歧义
+- 运动细分: 不同年龄、体能等级、伤病限制、恢复训练、天气约束、计划周期
+- 环境细分: 多城市、多日期、天气API失败、AQI缺失、高温/低温/紫外线组合
+- 记忆细分: 饮食偏好、过敏史、慢病、目标变化、冲突记忆、过期记忆
+- RAG细分: 多文档证据、多跳问题、无答案问题、召回噪声、引用不完整
+- 安全细分: 药物剂量、诊断请求、儿童/孕妇/老人敏感人群、自伤风险
+- 工程异常: ES不可用、Redis不可用、LLM超时、工具超时、子Agent partial失败
+- 线上反馈: 点踩样本、用户纠错样本、人工低分样本、失败归因后的回归样本
+
+#### 11.1.9 扩展功能: 版本管理与回归评估
 
 > 版本管理不作为MVP必选项。MVP阶段先沉淀稳定评测集和基础指标;当Prompt、模型、检索策略开始频繁迭代后,再引入系统化版本管理。
 
@@ -3289,7 +3509,7 @@ Agent生成调用意图
 - 保留基线版本指标,所有新版本必须跑同一套评测集
 - 若安全召回率下降、工具误调用上升、回复质量下降,则阻断上线
 
-#### 11.1.8 与线上观测联动
+#### 11.1.10 与线上观测联动
 - 将离线评测指标与线上真实数据结合分析
 - 对线上低分会话、失败会话、安全拦截会话做抽样回流
 - 沉淀高价值失败Case进入评测集,不断增强数据集覆盖度

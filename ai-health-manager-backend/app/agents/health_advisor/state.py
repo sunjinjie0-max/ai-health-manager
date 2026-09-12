@@ -65,6 +65,11 @@ class HealthAdvisorState(AgentState):
         self["memory_route_reason"] = ""
         self["retrieved_short_term_memories"] = []
         self["retrieved_long_term_memories"] = []
+        self["profile_extraction_trace"] = {}
+        self["profile_rejected_candidates"] = []
+        self["pending_profile_confirmations"] = []
+        self["profile_confirmation_required"] = False
+        self["profile_confirmation_status"] = None
 
         # Output
         self["response"] = ""

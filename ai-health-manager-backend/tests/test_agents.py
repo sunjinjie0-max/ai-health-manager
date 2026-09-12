@@ -285,8 +285,10 @@ def test_target_date_parses_dot_format():
     from datetime import timedelta
 
     today = utc_now().date()
-    target = _target_date_from_message("9.8日在杭州，根据天气推荐运动计划")
     expected = today + timedelta(days=1)
+    target = _target_date_from_message(
+        f"{expected.month}.{expected.day}日在杭州，根据天气推荐运动计划"
+    )
     assert target == expected, f"Expected {expected}, got {target}"
 
 
@@ -297,8 +299,8 @@ def test_target_date_parses_dot_format_without_ri():
     from datetime import timedelta
 
     today = utc_now().date()
-    target = _target_date_from_message("9.8 杭州 跑步")
     expected = today + timedelta(days=1)
+    target = _target_date_from_message(f"{expected.month}.{expected.day} 杭州 跑步")
     assert target == expected, f"Expected {expected}, got {target}"
 
 
@@ -309,8 +311,8 @@ def test_target_date_parses_chinese_format():
     from datetime import timedelta
 
     today = utc_now().date()
-    target = _target_date_from_message("9月8日在杭州")
     expected = today + timedelta(days=1)
+    target = _target_date_from_message(f"{expected.month}月{expected.day}日在杭州")
     assert target == expected, f"Expected {expected}, got {target}"
 
 

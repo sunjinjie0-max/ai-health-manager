@@ -45,10 +45,28 @@ async def test_default_offline_evaluation_passes():
 
 
 def test_builtin_evaluation_datasets_load():
+    expected_case_counts = {
+        "health_advisor": 40,
+        "safety": 40,
+        "routing": 40,
+        "memory": 40,
+        "rag": 50,
+        "e2e_agent": 30,
+    }
+    all_case_ids = []
     for dataset in SUITE_DATASETS.values():
         cases = load_cases(dataset)
         assert cases
         assert all(case.id for case in cases)
+        assert all(case.query.strip() for case in cases)
+        assert all(case.tags for case in cases)
+        suite_name = next(name for name, path in SUITE_DATASETS.items() if path == dataset)
+        assert len(cases) == expected_case_counts[suite_name]
+        all_case_ids.extend(case.id for case in cases)
+
+    assert sum(expected_case_counts.values()) == 240
+    assert len(all_case_ids) == 240
+    assert len(set(all_case_ids)) == 240
 
 
 @pytest.mark.asyncio

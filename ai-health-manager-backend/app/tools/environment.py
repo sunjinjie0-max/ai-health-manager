@@ -154,7 +154,7 @@ def _target_date_from_message(message: str) -> date:
     if zh_match:
         month, day = map(int, zh_match.groups())
         target = date(today.year, month, day)
-        if target < today:
+        if target < today - timedelta(days=180):
             target = date(today.year + 1, month, day)
         return target
 
@@ -162,7 +162,7 @@ def _target_date_from_message(message: str) -> date:
     if dot_match:
         month, day = map(int, dot_match.groups())
         target = date(today.year, month, day)
-        if target < today:
+        if target < today - timedelta(days=180):
             target = date(today.year + 1, month, day)
         return target
 

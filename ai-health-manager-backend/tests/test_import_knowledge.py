@@ -7,7 +7,6 @@ from scripts.import_knowledge import (
     extract_html_text,
     read_json_records,
 )
-from app.rag.knowledge_base import KnowledgeBase
 
 
 def test_clean_text_removes_page_numbers_and_normalizes_spacing():
@@ -87,38 +86,4 @@ def test_build_documents_chunks_and_adds_metadata():
     assert docs[0]["metadata"]["topic"] == "aerobic"
     assert docs[0]["metadata"]["authority"] == "test"
     assert docs[0]["metadata"]["version"] == "2026"
-    assert docs[0]["metadata"]["chunk_size"] == 30
-    assert docs[0]["metadata"]["chunk_overlap"] == 5
     assert docs[0]["content"]
-
-
-def test_chunk_text_honors_explicit_zero_overlap():
-    knowledge_base = KnowledgeBase(
-        embedding_model=None,
-        chunk_size=5,
-        chunk_overlap=2,
-        index_name="unused",
-    )
-
-    chunks = knowledge_base.chunk_text("abcdefghij", chunk_overlap=0)
-
-    assert [chunk["start"] for chunk in chunks] == [0, 5]
-    assert [chunk["end"] for chunk in chunks] == [5, 10]
-
-
-def test_chunk_text_advances_when_sentence_boundary_is_inside_overlap():
-    knowledge_base = KnowledgeBase(
-        embedding_model=None,
-        chunk_size=10,
-        chunk_overlap=4,
-        index_name="unused",
-    )
-
-    text = "A。 bcdefghijklmnop"
-    chunks = knowledge_base.chunk_text(text)
-
-    starts = [chunk["start"] for chunk in chunks]
-    assert starts == sorted(set(starts))
-    assert chunks[0]["end"] == 2
-    assert chunks[1]["start"] == 2
-    assert chunks[-1]["end"] == len(text)

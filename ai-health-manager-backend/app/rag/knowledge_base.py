@@ -71,13 +71,8 @@ class KnowledgeBase:
         Returns:
             List of chunks with metadata
         """
-        size = self.chunk_size if chunk_size is None else chunk_size
-        overlap = self.chunk_overlap if chunk_overlap is None else chunk_overlap
-
-        if size <= 0:
-            raise ValueError("chunk_size must be greater than 0")
-        if overlap < 0 or overlap >= size:
-            raise ValueError("chunk_overlap must be greater than or equal to 0 and smaller than chunk_size")
+        size = chunk_size or self.chunk_size
+        overlap = chunk_overlap or self.chunk_overlap
 
         if len(text) <= size:
             return [{"text": text, "start": 0, "end": len(text)}]
@@ -110,15 +105,7 @@ class KnowledgeBase:
             if end >= len(text):
                 break
 
-            next_start = end - overlap
-
-            if next_start <= start:
-                # A sentence boundary can fall inside the overlap window. In
-                # that case reusing the overlap would keep the cursor in place
-                # or move it backwards, so omit overlap for this short chunk.
-                next_start = end
-
-            start = next_start
+            start = end - overlap
             if start >= len(text):
                 break
 

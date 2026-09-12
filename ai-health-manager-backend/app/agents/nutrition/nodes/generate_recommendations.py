@@ -5,8 +5,6 @@ from typing import Any, Dict, List
 
 from app.llm.deepseek import DeepSeekClient
 
-from ..state import NutritionState
-
 logger = logging.getLogger(__name__)
 
 
@@ -49,70 +47,93 @@ async def generate_recommendations(state: dict) -> dict:
         llm = DeepSeekClient()
 
         # Build system prompt and user message for recommendations
-        system_prompt = "You are a professional nutritionist. Provide personalized dietary recommendations based on meal analysis."
-        user_message = f"""Provide personalized dietary recommendations based on this meal analysis:
+        system_prompt = f"""You are a professional nutritionist.
 
-**Nutritional Summary:**
+Based only on the nutritional data and user context provided, generate:
+1. A concise nutritional analysis.
+2. Specific and actionable dietary recommendations.
+
+Your response must be valid JSON.
+Do not include Markdown, code fences, headings, or any text outside the JSON object.
+All user-facing content must be written in Chinese."""
+        user_message = f"""
+Analyze the following meal and provide dietary recommendations.
+
+Nutritional Summary:
 - Total Calories: {total.get('calories', 0):.0f} kcal
-- Protein: {total.get('protein', 0):.1f}g
-- Carbohydrates: {total.get('carbs', 0):.1f}g
-- Fat: {total.get('fat', 0):.1f}g
-- Fiber: {total.get('fiber', 0):.1f}g
+- Protein: {total.get('protein', 0):.1f} g
+- Carbohydrates: {total.get('carbs', 0):.1f} g
+- Fat: {total.get('fat', 0):.1f} g
+- Fiber: {total.get('fiber', 0):.1f} g
 
-**Nutritional Analysis:**
+Calculated Assessment:
 {analysis}
 
-**Health Score:** {health_score:.0f}/100
+Health Score:
+{health_score:.0f}/100
 
-**User Context:**
+User Context:
 - Health Goals: {', '.join(goals) if goals else 'Not specified'}
-- Dietary Restrictions: {', '.join(restrictions) if restrictions else 'None'}
+- Dietary Restrictions: {', '.join(restrictions) if restrictions else 'None specified'}
 
-**Task:**
-Provide 3-5 specific, actionable recommendations in Chinese (each 1-2 sentences):
+Return exactly one JSON object using this structure:
 
-1. Immediate improvements for this meal
-2. Balancing macronutrients if needed
-3. Foods to add or reduce
-4. Timing or portion suggestions
-5. Alignment with user goals/restrictions
+{{
+  "nutrition_analysis": "A concise nutritional analysis in Chinese",
+  "recommendations": [
+    "A specific recommendation in Chinese",
+    "A specific recommendation in Chinese",
+    "A specific recommendation in Chinese"
+  ]
+}}
 
-Make recommendations specific, practical, and encouraging. Avoid being preachy or negative.
-
-Return the recommendations as a numbered list in Chinese."""
+Requirements:
+- The nutrition_analysis must contain 3 to 5 concise Chinese sentences.
+- Cover overall nutritional balance, macronutrient distribution, strengths, and concerns.
+- Return 3 to 5 recommendations.
+- Each recommendation must be specific, practical, and actionable.
+- Base every conclusion on the nutritional data provided above.
+- Do not contradict the nutritional values or the calculated health score.
+- Do not invent foods, quantities, health conditions, goals, or dietary restrictions.
+- If some data is unavailable, explicitly acknowledge the limitation instead of guessing.
+- Do not repeat the same information in both nutrition_analysis and recommendations.
+- Do not provide a medical diagnosis.
+- Return only valid JSON.
+"""
 
         # Call LLM
         try:
-            response = await llm.chat(system_prompt=system_prompt, user_message=user_message)
-            content = response.strip()
+            response = await llm.json_chat(
+                    system_prompt=system_prompt,
+                    user_message=user_message,
+                    stage="nutrition.analyze_and_recommend",
+            )
+
         except Exception as e:
             logger.error(f"[generate_recommendations] LLM error: {e}")
-            content = ""
+            response = {}
 
-        if content:
-            # Parse recommendations from response
-            recommendations = []
-            for line in content.split('\n'):
-                line = line.strip()
-                # Look for numbered items
-                if line and (line[0].isdigit() or line.startswith('-') or line.startswith('•')):
-                    # Remove numbering/bullets
-                    rec = line
-                    if '.' in line[:5]:
-                        rec = line.split('.', 1)[1].strip()
-                    elif line.startswith('-') or line.startswith('•'):
-                        rec = line[1:].strip()
-                    if rec:
-                        recommendations.append(rec)
+        if not isinstance(response, dict) or "raw_response" in response:
+            logger.error(f"[generate_recommendations] LLM returned invalid JSON")
+            response = {}
 
-            # If no recommendations parsed, use fallback
-            if not recommendations:
-                recommendations = _generate_fallback_recommendations(state)
+        nutrition_analysis = response.get("nutrition_analysis", "").strip()
 
-            state['recommendations'] = recommendations
-        else:
-            # Use fallback recommendations when LLM fails
-            state['recommendations'] = _generate_fallback_recommendations(state)
+        recommendations = response.get("recommendations", [])
+        if not isinstance(recommendations, list):
+            recommendations=[]
+
+        recommendations = [
+            str(item).strip()
+            for item in recommendations
+            if str(item).strip()
+        ]
+
+        if nutrition_analysis:
+            state['nutrition_analysis'] = nutrition_analysis
+            state["nutrition_analysis_status"] = "generated"
+
+        state['recommendations'] = (recommendations or _generate_fallback_recommendations(state))
 
         # Generate alternative food suggestions
         state['alternative_foods'] = _generate_alternatives(state)

@@ -44,8 +44,8 @@ class NutritionState(dict):
         self.session_id = session_id
 
         # Input analysis
-        self.input_type: str = ""  # "text", "image", "mixed"
         self.food_description: str = ""
+        self.query_intent: str = "unknown"
 
         # Food extraction
         self.extracted_foods: List[Dict[str, Any]] = []
@@ -80,8 +80,8 @@ class NutritionState(dict):
             "user_message": self.user_message,
             "user_id": self.user_id,
             "session_id": self.session_id,
-            "input_type": self.input_type,
             "food_description": self.food_description,
+            "query_intent": self.query_intent,
             "extracted_foods": self.extracted_foods,
             "nutrition_data": self.nutrition_data,
             "total_nutrition": self.total_nutrition,
@@ -100,8 +100,8 @@ class NutritionState(dict):
             user_id=data.get("user_id", "anonymous"),
             session_id=data.get("session_id", ""),
         )
-        state.input_type = data.get("input_type", "")
         state.food_description = data.get("food_description", "")
+        state.query_intent = data.get("query_intent", "unknown")
         state.extracted_foods = data.get("extracted_foods", [])
         state.nutrition_data = data.get("nutrition_data", {})
         state.total_nutrition = data.get("total_nutrition", {})

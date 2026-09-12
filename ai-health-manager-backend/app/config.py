@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     memory_max_days: int = 365
     memory_write_enabled: bool = True
     memory_use_llm_supplement: bool = True
+    profile_use_llm_supplement: bool = True
+    profile_llm_min_confidence: float = 0.75
+    profile_high_risk_confirmation: bool = True
     elasticsearch_url: str | None = None
     elasticsearch_username: str | None = None
     elasticsearch_password: str | None = None

@@ -36,17 +36,14 @@ Food Description: {state.get('food_description', '')}
 
 Provide the following in JSON format:
 1. foods: An array of food items, each with:
-   - name: The food item name (be specific, e.g., "grilled chicken breast" not just "meat")
-   - amount: Estimated quantity as a number
-   - unit: Unit of measurement (g, oz, cup, piece, slice, bowl, etc.)
+   - name: A specific, standardized Simplified Chinese food name for database lookup, regardless of the language used by the user. For example: "炸鸡", "米饭", or "奶茶". Never return English names or pinyin in this field.
+   - amount: Estimated quantity as a positive number, without text or unit symbols
+   - unit: Use exactly one of these values: "g", "kg", "ml", "l", "cup", "bowl", "piece", "slice", or "serving"
    - category: Food category (protein, vegetable, fruit, grain, dairy, fat, beverage, condiment, other)
    - confidence: Your confidence in this extraction (0.0-1.0)
 
-2. meal_type: Type of meal described (breakfast, lunch, dinner, snack, beverage_only, mixed)
-
-3. total_items: Total number of distinct food items identified
-
 Be thorough and extract ALL food items mentioned. If quantities are not specified, use typical serving sizes as estimates.
+Normalize every food name to its common Simplified Chinese name while preserving important preparation details, such as "炸鸡" instead of the broader term "鸡肉".
 
 Return ONLY valid JSON without any markdown formatting or additional text."""
 
@@ -54,6 +51,7 @@ Return ONLY valid JSON without any markdown formatting or additional text."""
         response = await llm.json_chat(
             system_prompt=system_prompt,
             user_message=user_message,
+            stage="nutrition.extract_food",
         )
 
         # Parse response - response is already a dict from json_chat
@@ -62,6 +60,7 @@ Return ONLY valid JSON without any markdown formatting or additional text."""
             # Fallback to simple extraction
             food_desc = state.get('food_description', '')
             return {
+                **state,
                 "extracted_foods": [
                     {
                         "name": food_desc[:50] if food_desc else "unknown food",
@@ -96,13 +95,17 @@ Return ONLY valid JSON without any markdown formatting or additional text."""
         }
         logger.info(f"[extract_food] Returning keys: {list(result.keys())}")
         logger.info(f"[extract_food] Returning {len(foods)} foods")
-        return result
+        return {
+            **state,
+            **result,
+        }
 
     except Exception as e:
         logger.error(f"[extract_food] Error: {e}")
         # Fallback
         food_desc = state.get('food_description', '')
         return {
+            **state,
             "extracted_foods": [
                 {
                     "name": food_desc[:50] if food_desc else "unknown food",

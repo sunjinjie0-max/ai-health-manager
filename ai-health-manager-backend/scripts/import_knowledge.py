@@ -299,8 +299,6 @@ def build_documents(
                 "chunk_total": total_chunks,
                 "chunk_start": chunk.get("start", 0),
                 "chunk_end": chunk.get("end", 0),
-                "chunk_size": chunk_size,
-                "chunk_overlap": chunk_overlap,
             }
             metadata = {key: value for key, value in metadata.items() if value not in (None, "")}
 

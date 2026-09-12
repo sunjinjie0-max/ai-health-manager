@@ -1,11 +1,6 @@
 """Analyze Nutrition Node for Nutrition Agent."""
 
 import logging
-from typing import Any, Dict, List
-
-from app.llm.deepseek import DeepSeekClient
-
-from ..state import NutritionState
 
 logger = logging.getLogger(__name__)
 
@@ -49,19 +44,6 @@ async def analyze_nutrition(state: dict) -> dict:
         else:
             protein_pct = carbs_pct = fat_pct = 0
 
-        # Calculate calories from each macro
-        protein_cals = total.get("protein", 0) * 4
-        carbs_cals = total.get("carbs", 0) * 4
-        fat_cals = total.get("fat", 0) * 9
-        total_cals = total.get("calories", 0)
-
-        if total_cals > 0:
-            protein_cals_pct = (protein_cals / total_cals) * 100
-            carbs_cals_pct = (carbs_cals / total_cals) * 100
-            fat_cals_pct = (fat_cals / total_cals) * 100
-        else:
-            protein_cals_pct = carbs_cals_pct = fat_cals_pct = 0
-
         # Calculate health score (0-100)
         health_score = _calculate_health_score(
             protein_pct, carbs_pct, fat_pct,
@@ -70,32 +52,10 @@ async def analyze_nutrition(state: dict) -> dict:
         )
         state['health_score'] = health_score
 
-        # Use LLM for detailed analysis
-        llm = DeepSeekClient()
-
-        system_prompt = "You are a nutrition expert. Provide a professional nutritional analysis."
-        user_message = f"""Analyze this meal's nutritional composition:
-
-**Nutritional Summary:**
-- Total Calories: {total_cals:.0f} kcal
-- Protein: {total.get('protein', 0):.1f}g ({protein_pct:.1f}% of weight, {protein_cals_pct:.1f}% of calories)
-- Carbohydrates: {total.get('carbs', 0):.1f}g ({carbs_pct:.1f}% of weight, {carbs_cals_pct:.1f}% of calories)
-- Fat: {total.get('fat', 0):.1f}g ({fat_pct:.1f}% of weight, {fat_cals_pct:.1f}% of calories)
-- Fiber: {total.get('fiber', 0):.1f}g
-
-**Health Score:** {health_score:.0f}/100
-
-Provide a concise nutritional analysis in Chinese (3-5 sentences) covering:
-1. Overall nutritional balance
-2. Macronutrient distribution assessment
-3. Any nutritional strengths or concerns
-
-Be objective, professional, and actionable."""
-
-        response = await llm.chat(system_prompt=system_prompt, user_message=user_message)
-
-        state['nutrition_analysis'] = response.strip()
-        state['nutrition_analysis_status'] = "success"
+        state['nutrition_analysis'] = _generate_basic_analysis(
+            protein_pct, carbs_pct, fat_pct, health_score
+        )
+        state['nutrition_analysis_status'] = "calculated"
 
         logger.info(f"[analyze_nutrition] Analysis complete. Health score: {health_score}")
 

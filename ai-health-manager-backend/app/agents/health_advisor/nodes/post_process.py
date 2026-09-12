@@ -2,11 +2,18 @@
 
 import asyncio
 import logging
-import re
 
 from app.agents.health_advisor.prompts import FOLLOWUP_QUESTIONS_PROMPT
 from app.agents.health_advisor.state import HealthAdvisorState
 from app.llm.deepseek import deepseek_client
+from app.memory.extraction import (
+    candidates_to_profile_updates,
+    extract_profile_updates,
+    extract_rule_profile_candidates,
+    format_confirmation_prompt,
+    merge_profile_updates,
+    resolve_confirmation_intent,
+)
 from app.memory.long_term import long_term_memory
 from app.memory.profile import profile_manager
 from app.memory.short_term import short_term_memory
@@ -15,73 +22,13 @@ from app.services.suggested_questions import filter_suggested_questions
 
 logger = logging.getLogger(__name__)
 
-CONDITION_WORDS = ("高血压", "糖尿病", "高血脂", "脂肪肝", "痛风", "哮喘", "冠心病", "胃病")
-GOAL_WORDS = ("减脂", "减肥", "增肌", "控糖", "降压", "改善睡眠", "提高体能", "增强体质")
-
-
 def _extract_profile_from_response(response: str, user_message: str) -> dict:
-    """Extract structured profile updates from conversation.
-
-    Structured fields are persisted to PostgreSQL user_profiles. Free-form
-    habits and preferences are handled separately by the ES long-term memory.
-    """
-    extracted = {}
-    message = re.sub(r"\s+", " ", str(user_message or "")).strip()
-    if not message:
-        return extracted
-
-    age_match = re.search(r"(\d{1,3})[\s]*岁", message)
-    if age_match:
-        extracted.setdefault("basic_info", {})
-        extracted["basic_info"]["age"] = int(age_match.group(1))
-
-    if any(keyword in message for keyword in ("我是男", "男性", "男生")):
-        extracted.setdefault("basic_info", {})
-        extracted["basic_info"]["gender"] = "male"
-    elif any(keyword in message for keyword in ("我是女", "女性", "女生")):
-        extracted.setdefault("basic_info", {})
-        extracted["basic_info"]["gender"] = "female"
-
-    if "过敏" in message:
-        allergy_pattern = r"(?:对|吃)?([\u4e00-\u9fa5A-Za-z0-9]{1,12})过敏"
-        matches = [
-            match
-            for match in re.findall(allergy_pattern, message)
-            if match not in {"我", "自己", "有点", "严重"}
-        ]
-        if matches:
-            extracted.setdefault("health_status", {})
-            extracted["health_status"].setdefault("allergies", [])
-            for match in matches:
-                if match not in extracted["health_status"]["allergies"]:
-                    extracted["health_status"]["allergies"].append(match)
-
-    conditions = [
-        condition
-        for condition in CONDITION_WORDS
-        if any(pattern in message for pattern in (f"我有{condition}", f"我得了{condition}", f"患有{condition}"))
-    ]
-    if conditions:
-        extracted.setdefault("health_status", {})
-        extracted["health_status"].setdefault("conditions", [])
-        for condition in conditions:
-            if condition not in extracted["health_status"]["conditions"]:
-                extracted["health_status"]["conditions"].append(condition)
-
-    goals = [goal for goal in GOAL_WORDS if goal in message and "我" in message]
-    if goals:
-        extracted["health_goals"] = goals
-
-    diet_avoidances = re.findall(r"(?:不吃|忌口|避免吃)([\u4e00-\u9fa5A-Za-z0-9]{1,12})", message)
-    diet_likes = re.findall(r"(?:喜欢吃|爱吃)([\u4e00-\u9fa5A-Za-z0-9]{1,12})", message)
-    if diet_avoidances or diet_likes:
-        extracted.setdefault("diet_preferences", {})
-    if diet_avoidances:
-        extracted["diet_preferences"]["avoid"] = list(dict.fromkeys(diet_avoidances))
-    if diet_likes:
-        extracted["diet_preferences"]["likes"] = list(dict.fromkeys(diet_likes))
-
-    return extracted
+    """Backward-compatible rule-only view used by existing callers/tests."""
+    del response
+    candidates = extract_rule_profile_candidates(user_message)
+    return candidates_to_profile_updates(
+        [candidate for candidate in candidates if not candidate.requires_confirmation]
+    )
 
 
 async def _generate_followup_questions(
@@ -231,6 +178,32 @@ def _trigger_profile_update(user_id: str, extracted_profile: dict) -> bool:
         return False
 
 
+def _append_response_note(state: HealthAdvisorState, note: str) -> None:
+    note = str(note or "").strip()
+    if not note:
+        return
+    response = str(state.get("response") or "").rstrip()
+    state["response"] = f"{response}\n\n{note}" if response else note
+
+
+def _resolve_pending_profile_confirmation(
+    session_id: str,
+    user_message: str,
+) -> tuple[str | None, dict]:
+    pending = short_term_memory.get_pending_profile_confirmations(session_id)
+    if not pending:
+        return None, {}
+
+    intent = resolve_confirmation_intent(user_message)
+    if intent == "confirm":
+        confirmed = short_term_memory.pop_pending_profile_confirmations(session_id)
+        return "confirmed", candidates_to_profile_updates(confirmed)
+    if intent == "reject":
+        short_term_memory.pop_pending_profile_confirmations(session_id)
+        return "rejected", {}
+    return "awaiting", {}
+
+
 async def post_process(
     state: HealthAdvisorState,
     db=None,  # Optional db session for background tasks
@@ -272,16 +245,57 @@ async def post_process(
             "您想了解更多关于这方面的信息吗？",
         ]
 
-    # 2. Extract profile updates (simple keyword-based extraction)
+    # 2. Resolve prior confirmations, then run guarded rule + LLM extraction.
     try:
-        extracted_profile = _extract_profile_from_response(response, user_message)
+        confirmation_status, confirmed_profile = _resolve_pending_profile_confirmation(
+            session_id,
+            user_message,
+        )
+        state["profile_confirmation_status"] = confirmation_status
+
+        if confirmation_status == "confirmed":
+            _append_response_note(state, "已按你的确认更新健康档案。")
+        elif confirmation_status == "rejected":
+            _append_response_note(state, "好的，本次候选健康信息不会写入健康档案。")
+
+        # A pure confirmation/rejection message should not trigger another LLM extraction pass.
+        if confirmation_status in {"confirmed", "rejected"}:
+            extraction_outcome = None
+            extracted_profile = confirmed_profile
+        else:
+            extraction_outcome = await extract_profile_updates(user_message)
+            extracted_profile = merge_profile_updates(
+                confirmed_profile,
+                extraction_outcome.accepted_updates,
+            )
+            state["profile_extraction_trace"] = extraction_outcome.trace
+            state["profile_rejected_candidates"] = extraction_outcome.rejected_candidates
+
+            if extraction_outcome.pending_confirmations:
+                pending_payload = [
+                    candidate.model_dump() for candidate in extraction_outcome.pending_confirmations
+                ]
+                short_term_memory.set_pending_profile_confirmations(session_id, pending_payload)
+                state["pending_profile_confirmations"] = pending_payload
+                state["profile_confirmation_required"] = True
+                state["suggested_questions"] = ["确认记录", "不要记录"]
+                pending_summary = format_confirmation_prompt(extraction_outcome.pending_confirmations)
+                _append_response_note(
+                    state,
+                    "为了避免错误写入敏感健康信息，请确认是否记录："
+                    f"{pending_summary}。请回复“确认记录”或“不要记录”。",
+                )
+
         if extracted_profile:
-            logger.info(f"Extracted profile updates: {extracted_profile}")
+            logger.info(
+                "Validated profile update sections=%s",
+                sorted(extracted_profile.keys()),
+            )
             state["extracted_profile"] = extracted_profile
             state["profile_update_scheduled"] = _trigger_profile_update(user_id, extracted_profile)
             state["profile_updated"] = False
     except Exception as e:
-        logger.error(f"Profile extraction failed: {e}")
+        logger.exception("Profile extraction failed: %s", e)
 
     # 3. Update short-term memory synchronously so immediate follow-ups can use it.
     try:
@@ -289,7 +303,7 @@ async def post_process(
             user_id,
             session_id,
             user_message,
-            response,
+            state.get("response", response),
             state.get("extracted_profile", {}),
         )
         logger.info("Short-term memory updated")
@@ -303,7 +317,7 @@ async def post_process(
             user_id=user_id,
             session_id=session_id,
             user_message=user_message,
-            assistant_response=response,
+            assistant_response=state.get("response", response),
             extracted_profile=state.get("extracted_profile", {}),
         )
         state["stored_memory_ids"] = stored_memory_ids

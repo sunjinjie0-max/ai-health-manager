@@ -2,7 +2,10 @@
   {
     "id": "rag_physical_activity_guideline",
     "query": "成年人建议多大的身体活动量？",
-    "tags": ["rag", "exercise"],
+    "tags": [
+      "rag",
+      "exercise"
+    ],
     "reference_response": "成年人通常建议每周进行150-300分钟中等强度有氧身体活动，或75-150分钟高强度有氧身体活动，并每周至少2天进行肌肉力量训练。可结合自身基础分散到多天完成。",
     "retrieved_docs": [
       {
@@ -30,18 +33,30 @@
       "intent": "exercise",
       "urgent": false,
       "prompt_injection": false,
-      "task_agents": ["exercise"],
+      "task_agents": [
+        "exercise"
+      ],
       "memory_scope": "rag_only",
       "needs_rag": true,
-      "rag_doc_ids": ["physical_activity_guideline_001"],
-      "rag_topics": ["physical_activity"],
-      "rag_context_terms": ["150-300分钟", "力量训练"]
+      "rag_doc_ids": [
+        "physical_activity_guideline_001"
+      ],
+      "rag_topics": [
+        "physical_activity"
+      ],
+      "rag_context_terms": [
+        "150-300分钟",
+        "力量训练"
+      ]
     }
   },
   {
     "id": "rag_hypertension_lifestyle",
     "query": "高血压的人生活方式上需要注意什么？",
-    "tags": ["rag", "hypertension"],
+    "tags": [
+      "rag",
+      "hypertension"
+    ],
     "reference_response": "高血压人群生活方式上应注意低盐饮食、规律运动、控制体重、限制饮酒、保持良好睡眠，并按医嘱监测血压。若血压持续异常，应及时就医。",
     "retrieved_docs": [
       {
@@ -60,15 +75,25 @@
       "urgent": false,
       "prompt_injection": false,
       "task_agents": [],
-      "rag_doc_ids": ["hypertension_lifestyle_001"],
-      "rag_topics": ["hypertension"],
-      "rag_context_terms": ["低盐", "监测血压"]
+      "rag_doc_ids": [
+        "hypertension_lifestyle_001"
+      ],
+      "rag_topics": [
+        "hypertension"
+      ],
+      "rag_context_terms": [
+        "低盐",
+        "监测血压"
+      ]
     }
   },
   {
     "id": "rag_sleep_guideline",
     "query": "成年人一般建议睡多久？",
-    "tags": ["rag", "sleep"],
+    "tags": [
+      "rag",
+      "sleep"
+    ],
     "reference_response": "成年人一般建议每晚睡7-9小时，并尽量保持稳定作息。如果长期睡眠不足或白天功能受影响，建议进一步咨询医生或睡眠门诊。",
     "retrieved_docs": [
       {
@@ -87,9 +112,1905 @@
       "urgent": false,
       "prompt_injection": false,
       "task_agents": [],
-      "rag_doc_ids": ["sleep_guideline_001"],
-      "rag_topics": ["sleep"],
-      "rag_context_terms": ["7-9小时", "稳定作息"]
+      "rag_doc_ids": [
+        "sleep_guideline_001"
+      ],
+      "rag_topics": [
+        "sleep"
+      ],
+      "rag_context_terms": [
+        "7-9小时",
+        "稳定作息"
+      ]
     }
+  },
+  {
+    "id": "rag_diabetes_diet_guideline",
+    "query": "控糖饮食应该注意什么？",
+    "tags": [
+      "rag",
+      "nutrition",
+      "diabetes"
+    ],
+    "reference_response": "控糖饮食应关注总能量、主食份量、膳食纤维和含糖饮料控制，优先选择全谷物、蔬菜和优质蛋白，并结合血糖监测调整。",
+    "retrieved_docs": [
+      {
+        "id": "diabetes_diet_001",
+        "title": "控糖饮食基本原则",
+        "content": "控糖饮食应控制总能量和主食份量，增加膳食纤维，减少含糖饮料，优先选择全谷物、蔬菜和优质蛋白，并结合血糖监测。",
+        "source": "diabetes guideline",
+        "metadata": {
+          "topic": "diabetes_diet",
+          "category": "nutrition"
+        }
+      },
+      {
+        "id": "exercise_general_001",
+        "title": "一般运动建议",
+        "content": "规律身体活动有助于维持健康体重。",
+        "source": "exercise guideline",
+        "metadata": {
+          "topic": "physical_activity",
+          "category": "exercise"
+        }
+      }
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ],
+      "rag_doc_ids": [
+        "diabetes_diet_001"
+      ],
+      "rag_topics": [
+        "diabetes_diet"
+      ],
+      "rag_context_terms": [
+        "主食份量",
+        "血糖监测"
+      ]
+    }
+  },
+  {
+    "id": "rag_knee_pain_low_impact_exercise",
+    "query": "膝盖不舒服时适合什么运动？",
+    "tags": [
+      "rag",
+      "exercise",
+      "joint_safety"
+    ],
+    "reference_response": "膝盖不舒服时应避免高冲击跳跃和疼痛动作，可优先考虑低冲击运动，如步行、骑车、游泳或康复训练，并根据疼痛变化调整。",
+    "retrieved_docs": [
+      {
+        "id": "low_impact_exercise_001",
+        "title": "膝关节不适时的低冲击运动",
+        "content": "膝关节不适时应避免高冲击跳跃，优先选择低冲击运动，如步行、骑车、游泳或康复训练，并根据疼痛程度调整。",
+        "source": "sports medicine guideline",
+        "metadata": {
+          "topic": "low_impact_exercise",
+          "category": "exercise"
+        }
+      },
+      {
+        "id": "protein_intake_001",
+        "title": "蛋白质摄入建议",
+        "content": "日常饮食可选择鱼、蛋、奶、豆制品等优质蛋白。",
+        "source": "nutrition guideline",
+        "metadata": {
+          "topic": "protein",
+          "category": "nutrition"
+        }
+      }
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "low_impact_exercise_001"
+      ],
+      "rag_topics": [
+        "low_impact_exercise"
+      ],
+      "rag_context_terms": [
+        "低冲击运动",
+        "避免高冲击跳跃"
+      ]
+    }
+  },
+  {
+    "id": "rag_aqi_outdoor_exercise",
+    "query": "AQI超过150还适合户外运动吗？",
+    "tags": [
+      "rag",
+      "environment",
+      "exercise"
+    ],
+    "reference_response": "AQI超过150通常不建议进行高强度户外运动，敏感人群应减少户外活动，可改为室内低强度运动，并关注实时空气质量。",
+    "retrieved_docs": [
+      {
+        "id": "aqi_exercise_001",
+        "title": "空气质量与户外运动建议",
+        "content": "当AQI超过150时，空气质量对健康影响增加，不建议进行高强度户外运动，儿童、老人和呼吸系统疾病人群应减少户外活动。",
+        "source": "environment health guideline",
+        "metadata": {
+          "topic": "aqi_exercise",
+          "category": "environment"
+        }
+      },
+      {
+        "id": "sleep_guideline_001",
+        "title": "成年人睡眠建议",
+        "content": "成年人通常建议每晚保持7-9小时睡眠。",
+        "source": "sleep guideline",
+        "metadata": {
+          "topic": "sleep",
+          "category": "lifestyle"
+        }
+      }
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "aqi_exercise_001"
+      ],
+      "rag_topics": [
+        "aqi_exercise"
+      ],
+      "rag_context_terms": [
+        "AQI超过150",
+        "高强度户外运动"
+      ]
+    }
+  },
+  {
+    "id": "rag_hypertension_salt_reason",
+    "query": "高血压饮食为什么要少盐？",
+    "tags": [
+      "rag",
+      "nutrition",
+      "hypertension"
+    ],
+    "reference_response": "高血压人群少盐有助于控制血压，建议减少腌制食品、加工食品和重口味调味品，并结合血压监测和医生建议调整。",
+    "retrieved_docs": [
+      {
+        "id": "hypertension_salt_001",
+        "title": "高血压与限盐",
+        "content": "高血压人群应限制钠盐摄入，减少腌制食品、加工食品和重口味调味品，有助于控制血压，并应结合血压监测。",
+        "source": "hypertension guideline",
+        "metadata": {
+          "topic": "hypertension_salt",
+          "category": "nutrition"
+        }
+      }
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ],
+      "rag_doc_ids": [
+        "hypertension_salt_001"
+      ],
+      "rag_topics": [
+        "hypertension_salt"
+      ],
+      "rag_context_terms": [
+        "限制钠盐",
+        "控制血压"
+      ]
+    }
+  },
+  {
+    "id": "expanded_rag_1_01_adult_activity",
+    "query": "成年人每周建议多大的身体活动量？",
+    "tags": [
+      "rag",
+      "physical_activity"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_adult_activity_1"
+      ],
+      "rag_topics": [
+        "physical_activity"
+      ],
+      "rag_context_terms": [
+        "150-300分钟",
+        "力量训练"
+      ]
+    },
+    "reference_response": "根据相关健康资料，成年人每周建议150-300分钟中等强度身体活动，并安排力量训练。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_adult_activity_1",
+        "title": "physical_activity健康知识",
+        "content": "成年人每周建议150-300分钟中等强度身体活动，并安排力量训练。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "physical_activity",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_02_sleep_duration",
+    "query": "成年人睡眠多久属于推荐范围？",
+    "tags": [
+      "rag",
+      "sleep"
+    ],
+    "expected": {
+      "intent": "lifestyle",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_sleep_duration_1"
+      ],
+      "rag_topics": [
+        "sleep"
+      ],
+      "rag_context_terms": [
+        "7-9小时",
+        "稳定作息"
+      ]
+    },
+    "reference_response": "根据相关健康资料，成年人通常建议每晚保持7-9小时睡眠并维持稳定作息。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_sleep_duration_1",
+        "title": "sleep健康知识",
+        "content": "成年人通常建议每晚保持7-9小时睡眠并维持稳定作息。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "sleep",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_03_salt",
+    "query": "高血压饮食为什么要注意低盐？",
+    "tags": [
+      "rag",
+      "hypertension"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_salt_1"
+      ],
+      "rag_topics": [
+        "hypertension"
+      ],
+      "rag_context_terms": [
+        "钠盐",
+        "血压"
+      ]
+    },
+    "reference_response": "根据相关健康资料，减少钠盐摄入有助于血压管理，并应结合规律监测。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_salt_1",
+        "title": "hypertension健康知识",
+        "content": "减少钠盐摄入有助于血压管理，并应结合规律监测。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "hypertension",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_04_sugar",
+    "query": "血糖偏高时饮食要注意什么？",
+    "tags": [
+      "rag",
+      "diabetes"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_sugar_1"
+      ],
+      "rag_topics": [
+        "diabetes"
+      ],
+      "rag_context_terms": [
+        "精制糖",
+        "监测血糖"
+      ]
+    },
+    "reference_response": "根据相关健康资料，应控制精制糖和总能量，选择高纤维食物并规律监测血糖。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_sugar_1",
+        "title": "diabetes健康知识",
+        "content": "应控制精制糖和总能量，选择高纤维食物并规律监测血糖。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "diabetes",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_05_protein",
+    "query": "增肌训练后如何补充蛋白质？",
+    "tags": [
+      "rag",
+      "sports_nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition",
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_protein_1"
+      ],
+      "rag_topics": [
+        "sports_nutrition"
+      ],
+      "rag_context_terms": [
+        "优质蛋白质",
+        "力量训练"
+      ]
+    },
+    "reference_response": "根据相关健康资料，增肌人群可在全天均匀安排优质蛋白质，并结合力量训练。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_protein_1",
+        "title": "sports_nutrition健康知识",
+        "content": "增肌人群可在全天均匀安排优质蛋白质，并结合力量训练。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "sports_nutrition",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_06_fiber",
+    "query": "日常饮食如何增加膳食纤维？",
+    "tags": [
+      "rag",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_fiber_1"
+      ],
+      "rag_topics": [
+        "nutrition"
+      ],
+      "rag_context_terms": [
+        "全谷物",
+        "膳食纤维"
+      ]
+    },
+    "reference_response": "根据相关健康资料，可通过全谷物、蔬菜、水果和豆类增加膳食纤维。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_fiber_1",
+        "title": "nutrition健康知识",
+        "content": "可通过全谷物、蔬菜、水果和豆类增加膳食纤维。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "nutrition",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_07_hydration",
+    "query": "运动时补水有什么基本原则？",
+    "tags": [
+      "rag",
+      "hydration"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_hydration_1"
+      ],
+      "rag_topics": [
+        "hydration"
+      ],
+      "rag_context_terms": [
+        "少量多次",
+        "出汗量"
+      ]
+    },
+    "reference_response": "根据相关健康资料，运动补水应少量多次，并根据出汗量和天气调整。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_hydration_1",
+        "title": "hydration健康知识",
+        "content": "运动补水应少量多次，并根据出汗量和天气调整。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "hydration",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_08_aqi",
+    "query": "AQI较高时户外运动怎么调整？",
+    "tags": [
+      "rag",
+      "air_quality"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_aqi_1"
+      ],
+      "rag_topics": [
+        "air_quality"
+      ],
+      "rag_context_terms": [
+        "减少户外",
+        "敏感人群"
+      ]
+    },
+    "reference_response": "根据相关健康资料，AQI较高时应减少户外运动时长和强度，敏感人群更需谨慎。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_aqi_1",
+        "title": "air_quality健康知识",
+        "content": "AQI较高时应减少户外运动时长和强度，敏感人群更需谨慎。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "air_quality",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_09_heat",
+    "query": "高温天气跑步要注意什么？",
+    "tags": [
+      "rag",
+      "heat_exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_heat_1"
+      ],
+      "rag_topics": [
+        "heat_exercise"
+      ],
+      "rag_context_terms": [
+        "降低强度",
+        "补水"
+      ]
+    },
+    "reference_response": "根据相关健康资料，高温天气跑步应避开炎热时段、降低强度并及时补水。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_heat_1",
+        "title": "heat_exercise健康知识",
+        "content": "高温天气跑步应避开炎热时段、降低强度并及时补水。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "heat_exercise",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_10_uv",
+    "query": "紫外线强时户外活动如何防护？",
+    "tags": [
+      "rag",
+      "uv"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_uv_1"
+      ],
+      "rag_topics": [
+        "uv"
+      ],
+      "rag_context_terms": [
+        "避开暴晒",
+        "防晒"
+      ]
+    },
+    "reference_response": "根据相关健康资料，紫外线强时应避开暴晒时段，使用遮挡和防晒措施。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_uv_1",
+        "title": "uv健康知识",
+        "content": "紫外线强时应避开暴晒时段，使用遮挡和防晒措施。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "uv",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_11_knee",
+    "query": "膝盖疼时适合哪些低冲击运动？",
+    "tags": [
+      "rag",
+      "joint_health"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_knee_1"
+      ],
+      "rag_topics": [
+        "joint_health"
+      ],
+      "rag_context_terms": [
+        "低冲击",
+        "避免疼痛动作"
+      ]
+    },
+    "reference_response": "根据相关健康资料，膝盖疼痛时可优先考虑步行、骑车等低冲击运动，并避免疼痛动作。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_knee_1",
+        "title": "joint_health健康知识",
+        "content": "膝盖疼痛时可优先考虑步行、骑车等低冲击运动，并避免疼痛动作。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "joint_health",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_12_warmup",
+    "query": "力量训练前热身有什么作用？",
+    "tags": [
+      "rag",
+      "exercise_safety"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_warmup_1"
+      ],
+      "rag_topics": [
+        "exercise_safety"
+      ],
+      "rag_context_terms": [
+        "活动度",
+        "主要训练"
+      ]
+    },
+    "reference_response": "根据相关健康资料，训练前热身有助于逐步提高体温和活动度，为主要训练做准备。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_warmup_1",
+        "title": "exercise_safety健康知识",
+        "content": "训练前热身有助于逐步提高体温和活动度，为主要训练做准备。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "exercise_safety",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_13_recovery",
+    "query": "运动后恢复需要关注哪些方面？",
+    "tags": [
+      "rag",
+      "exercise_recovery"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_recovery_1"
+      ],
+      "rag_topics": [
+        "exercise_recovery"
+      ],
+      "rag_context_terms": [
+        "睡眠",
+        "训练间隔"
+      ]
+    },
+    "reference_response": "根据相关健康资料，运动后恢复应关注睡眠、营养、补水和训练间隔。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_recovery_1",
+        "title": "exercise_recovery健康知识",
+        "content": "运动后恢复应关注睡眠、营养、补水和训练间隔。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "exercise_recovery",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_14_sedentary",
+    "query": "久坐人群怎样降低健康风险？",
+    "tags": [
+      "rag",
+      "sedentary_behavior"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_sedentary_1"
+      ],
+      "rag_topics": [
+        "sedentary_behavior"
+      ],
+      "rag_context_terms": [
+        "定时起身",
+        "身体活动"
+      ]
+    },
+    "reference_response": "根据相关健康资料，久坐人群应定时起身活动，并逐步增加日常身体活动。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_sedentary_1",
+        "title": "sedentary_behavior健康知识",
+        "content": "久坐人群应定时起身活动，并逐步增加日常身体活动。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "sedentary_behavior",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_15_weight",
+    "query": "健康减重的基本原则是什么？",
+    "tags": [
+      "rag",
+      "weight_management"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_weight_1"
+      ],
+      "rag_topics": [
+        "weight_management"
+      ],
+      "rag_context_terms": [
+        "能量缺口",
+        "可持续"
+      ]
+    },
+    "reference_response": "根据相关健康资料，健康减重强调适度能量缺口、均衡饮食、规律运动和长期可持续。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_weight_1",
+        "title": "weight_management健康知识",
+        "content": "健康减重强调适度能量缺口、均衡饮食、规律运动和长期可持续。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "weight_management",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_16_breakfast",
+    "query": "营养均衡的早餐应包含什么？",
+    "tags": [
+      "rag",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_breakfast_1"
+      ],
+      "rag_topics": [
+        "nutrition"
+      ],
+      "rag_context_terms": [
+        "优质蛋白",
+        "蔬果"
+      ]
+    },
+    "reference_response": "根据相关健康资料，早餐可包含全谷物、优质蛋白和蔬果，并控制高糖高油食物。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_breakfast_1",
+        "title": "nutrition健康知识",
+        "content": "早餐可包含全谷物、优质蛋白和蔬果，并控制高糖高油食物。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "nutrition",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_17_alcohol",
+    "query": "饮酒会怎样影响健康管理？",
+    "tags": [
+      "rag",
+      "lifestyle"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_alcohol_1"
+      ],
+      "rag_topics": [
+        "lifestyle"
+      ],
+      "rag_context_terms": [
+        "健康风险",
+        "限制"
+      ]
+    },
+    "reference_response": "根据相关健康资料，饮酒会增加多种健康风险，健康管理中应限制或避免饮酒。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_alcohol_1",
+        "title": "lifestyle健康知识",
+        "content": "饮酒会增加多种健康风险，健康管理中应限制或避免饮酒。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "lifestyle",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_18_stress",
+    "query": "长期压力大如何做生活方式调整？",
+    "tags": [
+      "rag",
+      "mental_wellbeing"
+    ],
+    "expected": {
+      "intent": "lifestyle",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_stress_1"
+      ],
+      "rag_topics": [
+        "mental_wellbeing"
+      ],
+      "rag_context_terms": [
+        "放松练习",
+        "社会支持"
+      ]
+    },
+    "reference_response": "根据相关健康资料，可通过规律作息、适度活动、放松练习和社会支持管理压力。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_stress_1",
+        "title": "mental_wellbeing健康知识",
+        "content": "可通过规律作息、适度活动、放松练习和社会支持管理压力。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "mental_wellbeing",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_19_cholesterol",
+    "query": "血脂偏高时生活方式怎么调整？",
+    "tags": [
+      "rag",
+      "lipid_management"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_cholesterol_1"
+      ],
+      "rag_topics": [
+        "lipid_management"
+      ],
+      "rag_context_terms": [
+        "饱和脂肪",
+        "体重控制"
+      ]
+    },
+    "reference_response": "根据相关健康资料，血脂管理应关注均衡饮食、减少饱和脂肪、规律活动和体重控制。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_cholesterol_1",
+        "title": "lipid_management健康知识",
+        "content": "血脂管理应关注均衡饮食、减少饱和脂肪、规律活动和体重控制。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "lipid_management",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_20_osteoporosis",
+    "query": "中老年人如何通过生活方式保护骨骼？",
+    "tags": [
+      "rag",
+      "bone_health"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_osteoporosis_1"
+      ],
+      "rag_topics": [
+        "bone_health"
+      ],
+      "rag_context_terms": [
+        "负重运动",
+        "维生素D"
+      ]
+    },
+    "reference_response": "根据相关健康资料，骨骼健康需要适量负重运动、充足钙和维生素D，并预防跌倒。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_osteoporosis_1",
+        "title": "bone_health健康知识",
+        "content": "骨骼健康需要适量负重运动、充足钙和维生素D，并预防跌倒。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "bone_health",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_21_pregnancy",
+    "query": "孕期运动的一般安全原则是什么？",
+    "tags": [
+      "rag",
+      "pregnancy_exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_pregnancy_1"
+      ],
+      "rag_topics": [
+        "pregnancy_exercise"
+      ],
+      "rag_context_terms": [
+        "适宜强度",
+        "医生建议"
+      ]
+    },
+    "reference_response": "根据相关健康资料，孕期运动应结合个体情况选择适宜强度，并遵循医生建议和危险信号。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_pregnancy_1",
+        "title": "pregnancy_exercise健康知识",
+        "content": "孕期运动应结合个体情况选择适宜强度，并遵循医生建议和危险信号。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "pregnancy_exercise",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_1_22_older_adult",
+    "query": "老年人锻炼时为什么要加入平衡训练？",
+    "tags": [
+      "rag",
+      "older_adult_activity"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_older_adult_1"
+      ],
+      "rag_topics": [
+        "older_adult_activity"
+      ],
+      "rag_context_terms": [
+        "平衡训练",
+        "跌倒风险"
+      ]
+    },
+    "reference_response": "根据相关健康资料，老年人进行平衡训练有助于维持功能并降低跌倒风险。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_older_adult_1",
+        "title": "older_adult_activity健康知识",
+        "content": "老年人进行平衡训练有助于维持功能并降低跌倒风险。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "older_adult_activity",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_01_adult_activity",
+    "query": "请根据健康指南说明：成年人每周建议多大的身体活动量？",
+    "tags": [
+      "rag",
+      "physical_activity"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_adult_activity_2"
+      ],
+      "rag_topics": [
+        "physical_activity"
+      ],
+      "rag_context_terms": [
+        "150-300分钟",
+        "力量训练"
+      ]
+    },
+    "reference_response": "根据相关健康资料，成年人每周建议150-300分钟中等强度身体活动，并安排力量训练。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_adult_activity_2",
+        "title": "physical_activity健康知识",
+        "content": "成年人每周建议150-300分钟中等强度身体活动，并安排力量训练。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "physical_activity",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_02_sleep_duration",
+    "query": "请根据健康指南说明：成年人睡眠多久属于推荐范围？",
+    "tags": [
+      "rag",
+      "sleep"
+    ],
+    "expected": {
+      "intent": "lifestyle",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_sleep_duration_2"
+      ],
+      "rag_topics": [
+        "sleep"
+      ],
+      "rag_context_terms": [
+        "7-9小时",
+        "稳定作息"
+      ]
+    },
+    "reference_response": "根据相关健康资料，成年人通常建议每晚保持7-9小时睡眠并维持稳定作息。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_sleep_duration_2",
+        "title": "sleep健康知识",
+        "content": "成年人通常建议每晚保持7-9小时睡眠并维持稳定作息。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "sleep",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_03_salt",
+    "query": "请根据健康指南说明：高血压饮食为什么要注意低盐？",
+    "tags": [
+      "rag",
+      "hypertension"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_salt_2"
+      ],
+      "rag_topics": [
+        "hypertension"
+      ],
+      "rag_context_terms": [
+        "钠盐",
+        "血压"
+      ]
+    },
+    "reference_response": "根据相关健康资料，减少钠盐摄入有助于血压管理，并应结合规律监测。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_salt_2",
+        "title": "hypertension健康知识",
+        "content": "减少钠盐摄入有助于血压管理，并应结合规律监测。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "hypertension",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_04_sugar",
+    "query": "请根据健康指南说明：血糖偏高时饮食要注意什么？",
+    "tags": [
+      "rag",
+      "diabetes"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_sugar_2"
+      ],
+      "rag_topics": [
+        "diabetes"
+      ],
+      "rag_context_terms": [
+        "精制糖",
+        "监测血糖"
+      ]
+    },
+    "reference_response": "根据相关健康资料，应控制精制糖和总能量，选择高纤维食物并规律监测血糖。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_sugar_2",
+        "title": "diabetes健康知识",
+        "content": "应控制精制糖和总能量，选择高纤维食物并规律监测血糖。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "diabetes",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_05_protein",
+    "query": "请根据健康指南说明：增肌训练后如何补充蛋白质？",
+    "tags": [
+      "rag",
+      "sports_nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition",
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_protein_2"
+      ],
+      "rag_topics": [
+        "sports_nutrition"
+      ],
+      "rag_context_terms": [
+        "优质蛋白质",
+        "力量训练"
+      ]
+    },
+    "reference_response": "根据相关健康资料，增肌人群可在全天均匀安排优质蛋白质，并结合力量训练。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_protein_2",
+        "title": "sports_nutrition健康知识",
+        "content": "增肌人群可在全天均匀安排优质蛋白质，并结合力量训练。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "sports_nutrition",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_06_fiber",
+    "query": "请根据健康指南说明：日常饮食如何增加膳食纤维？",
+    "tags": [
+      "rag",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_fiber_2"
+      ],
+      "rag_topics": [
+        "nutrition"
+      ],
+      "rag_context_terms": [
+        "全谷物",
+        "膳食纤维"
+      ]
+    },
+    "reference_response": "根据相关健康资料，可通过全谷物、蔬菜、水果和豆类增加膳食纤维。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_fiber_2",
+        "title": "nutrition健康知识",
+        "content": "可通过全谷物、蔬菜、水果和豆类增加膳食纤维。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "nutrition",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_07_hydration",
+    "query": "请根据健康指南说明：运动时补水有什么基本原则？",
+    "tags": [
+      "rag",
+      "hydration"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_hydration_2"
+      ],
+      "rag_topics": [
+        "hydration"
+      ],
+      "rag_context_terms": [
+        "少量多次",
+        "出汗量"
+      ]
+    },
+    "reference_response": "根据相关健康资料，运动补水应少量多次，并根据出汗量和天气调整。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_hydration_2",
+        "title": "hydration健康知识",
+        "content": "运动补水应少量多次，并根据出汗量和天气调整。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "hydration",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_08_aqi",
+    "query": "请根据健康指南说明：AQI较高时户外运动怎么调整？",
+    "tags": [
+      "rag",
+      "air_quality"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_aqi_2"
+      ],
+      "rag_topics": [
+        "air_quality"
+      ],
+      "rag_context_terms": [
+        "减少户外",
+        "敏感人群"
+      ]
+    },
+    "reference_response": "根据相关健康资料，AQI较高时应减少户外运动时长和强度，敏感人群更需谨慎。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_aqi_2",
+        "title": "air_quality健康知识",
+        "content": "AQI较高时应减少户外运动时长和强度，敏感人群更需谨慎。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "air_quality",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_09_heat",
+    "query": "请根据健康指南说明：高温天气跑步要注意什么？",
+    "tags": [
+      "rag",
+      "heat_exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment",
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_heat_2"
+      ],
+      "rag_topics": [
+        "heat_exercise"
+      ],
+      "rag_context_terms": [
+        "降低强度",
+        "补水"
+      ]
+    },
+    "reference_response": "根据相关健康资料，高温天气跑步应避开炎热时段、降低强度并及时补水。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_heat_2",
+        "title": "heat_exercise健康知识",
+        "content": "高温天气跑步应避开炎热时段、降低强度并及时补水。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "heat_exercise",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_10_uv",
+    "query": "请根据健康指南说明：紫外线强时户外活动如何防护？",
+    "tags": [
+      "rag",
+      "uv"
+    ],
+    "expected": {
+      "intent": "environment",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "environment"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_uv_2"
+      ],
+      "rag_topics": [
+        "uv"
+      ],
+      "rag_context_terms": [
+        "避开暴晒",
+        "防晒"
+      ]
+    },
+    "reference_response": "根据相关健康资料，紫外线强时应避开暴晒时段，使用遮挡和防晒措施。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_uv_2",
+        "title": "uv健康知识",
+        "content": "紫外线强时应避开暴晒时段，使用遮挡和防晒措施。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "uv",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_11_knee",
+    "query": "请根据健康指南说明：膝盖疼时适合哪些低冲击运动？",
+    "tags": [
+      "rag",
+      "joint_health"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_knee_2"
+      ],
+      "rag_topics": [
+        "joint_health"
+      ],
+      "rag_context_terms": [
+        "低冲击",
+        "避免疼痛动作"
+      ]
+    },
+    "reference_response": "根据相关健康资料，膝盖疼痛时可优先考虑步行、骑车等低冲击运动，并避免疼痛动作。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_knee_2",
+        "title": "joint_health健康知识",
+        "content": "膝盖疼痛时可优先考虑步行、骑车等低冲击运动，并避免疼痛动作。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "joint_health",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_12_warmup",
+    "query": "请根据健康指南说明：力量训练前热身有什么作用？",
+    "tags": [
+      "rag",
+      "exercise_safety"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_warmup_2"
+      ],
+      "rag_topics": [
+        "exercise_safety"
+      ],
+      "rag_context_terms": [
+        "活动度",
+        "主要训练"
+      ]
+    },
+    "reference_response": "根据相关健康资料，训练前热身有助于逐步提高体温和活动度，为主要训练做准备。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_warmup_2",
+        "title": "exercise_safety健康知识",
+        "content": "训练前热身有助于逐步提高体温和活动度，为主要训练做准备。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "exercise_safety",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_13_recovery",
+    "query": "请根据健康指南说明：运动后恢复需要关注哪些方面？",
+    "tags": [
+      "rag",
+      "exercise_recovery"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_recovery_2"
+      ],
+      "rag_topics": [
+        "exercise_recovery"
+      ],
+      "rag_context_terms": [
+        "睡眠",
+        "训练间隔"
+      ]
+    },
+    "reference_response": "根据相关健康资料，运动后恢复应关注睡眠、营养、补水和训练间隔。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_recovery_2",
+        "title": "exercise_recovery健康知识",
+        "content": "运动后恢复应关注睡眠、营养、补水和训练间隔。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "exercise_recovery",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_14_sedentary",
+    "query": "请根据健康指南说明：久坐人群怎样降低健康风险？",
+    "tags": [
+      "rag",
+      "sedentary_behavior"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_sedentary_2"
+      ],
+      "rag_topics": [
+        "sedentary_behavior"
+      ],
+      "rag_context_terms": [
+        "定时起身",
+        "身体活动"
+      ]
+    },
+    "reference_response": "根据相关健康资料，久坐人群应定时起身活动，并逐步增加日常身体活动。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_sedentary_2",
+        "title": "sedentary_behavior健康知识",
+        "content": "久坐人群应定时起身活动，并逐步增加日常身体活动。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "sedentary_behavior",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_15_weight",
+    "query": "请根据健康指南说明：健康减重的基本原则是什么？",
+    "tags": [
+      "rag",
+      "weight_management"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_weight_2"
+      ],
+      "rag_topics": [
+        "weight_management"
+      ],
+      "rag_context_terms": [
+        "能量缺口",
+        "可持续"
+      ]
+    },
+    "reference_response": "根据相关健康资料，健康减重强调适度能量缺口、均衡饮食、规律运动和长期可持续。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_weight_2",
+        "title": "weight_management健康知识",
+        "content": "健康减重强调适度能量缺口、均衡饮食、规律运动和长期可持续。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "weight_management",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_16_breakfast",
+    "query": "请根据健康指南说明：营养均衡的早餐应包含什么？",
+    "tags": [
+      "rag",
+      "nutrition"
+    ],
+    "expected": {
+      "intent": "nutrition",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "nutrition"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_breakfast_2"
+      ],
+      "rag_topics": [
+        "nutrition"
+      ],
+      "rag_context_terms": [
+        "优质蛋白",
+        "蔬果"
+      ]
+    },
+    "reference_response": "根据相关健康资料，早餐可包含全谷物、优质蛋白和蔬果，并控制高糖高油食物。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_breakfast_2",
+        "title": "nutrition健康知识",
+        "content": "早餐可包含全谷物、优质蛋白和蔬果，并控制高糖高油食物。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "nutrition",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_17_alcohol",
+    "query": "请根据健康指南说明：饮酒会怎样影响健康管理？",
+    "tags": [
+      "rag",
+      "lifestyle"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_alcohol_2"
+      ],
+      "rag_topics": [
+        "lifestyle"
+      ],
+      "rag_context_terms": [
+        "健康风险",
+        "限制"
+      ]
+    },
+    "reference_response": "根据相关健康资料，饮酒会增加多种健康风险，健康管理中应限制或避免饮酒。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_alcohol_2",
+        "title": "lifestyle健康知识",
+        "content": "饮酒会增加多种健康风险，健康管理中应限制或避免饮酒。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "lifestyle",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_18_stress",
+    "query": "请根据健康指南说明：长期压力大如何做生活方式调整？",
+    "tags": [
+      "rag",
+      "mental_wellbeing"
+    ],
+    "expected": {
+      "intent": "lifestyle",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_stress_2"
+      ],
+      "rag_topics": [
+        "mental_wellbeing"
+      ],
+      "rag_context_terms": [
+        "放松练习",
+        "社会支持"
+      ]
+    },
+    "reference_response": "根据相关健康资料，可通过规律作息、适度活动、放松练习和社会支持管理压力。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_stress_2",
+        "title": "mental_wellbeing健康知识",
+        "content": "可通过规律作息、适度活动、放松练习和社会支持管理压力。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "mental_wellbeing",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_19_cholesterol",
+    "query": "请根据健康指南说明：血脂偏高时生活方式怎么调整？",
+    "tags": [
+      "rag",
+      "lipid_management"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_cholesterol_2"
+      ],
+      "rag_topics": [
+        "lipid_management"
+      ],
+      "rag_context_terms": [
+        "饱和脂肪",
+        "体重控制"
+      ]
+    },
+    "reference_response": "根据相关健康资料，血脂管理应关注均衡饮食、减少饱和脂肪、规律活动和体重控制。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_cholesterol_2",
+        "title": "lipid_management健康知识",
+        "content": "血脂管理应关注均衡饮食、减少饱和脂肪、规律活动和体重控制。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "lipid_management",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_20_osteoporosis",
+    "query": "请根据健康指南说明：中老年人如何通过生活方式保护骨骼？",
+    "tags": [
+      "rag",
+      "bone_health"
+    ],
+    "expected": {
+      "intent": "general_health",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [],
+      "rag_doc_ids": [
+        "expanded_doc_osteoporosis_2"
+      ],
+      "rag_topics": [
+        "bone_health"
+      ],
+      "rag_context_terms": [
+        "负重运动",
+        "维生素D"
+      ]
+    },
+    "reference_response": "根据相关健康资料，骨骼健康需要适量负重运动、充足钙和维生素D，并预防跌倒。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_osteoporosis_2",
+        "title": "bone_health健康知识",
+        "content": "骨骼健康需要适量负重运动、充足钙和维生素D，并预防跌倒。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "bone_health",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
+  },
+  {
+    "id": "expanded_rag_2_21_pregnancy",
+    "query": "请根据健康指南说明：孕期运动的一般安全原则是什么？",
+    "tags": [
+      "rag",
+      "pregnancy_exercise"
+    ],
+    "expected": {
+      "intent": "exercise",
+      "urgent": false,
+      "prompt_injection": false,
+      "task_agents": [
+        "exercise"
+      ],
+      "rag_doc_ids": [
+        "expanded_doc_pregnancy_2"
+      ],
+      "rag_topics": [
+        "pregnancy_exercise"
+      ],
+      "rag_context_terms": [
+        "适宜强度",
+        "医生建议"
+      ]
+    },
+    "reference_response": "根据相关健康资料，孕期运动应结合个体情况选择适宜强度，并遵循医生建议和危险信号。",
+    "retrieved_docs": [
+      {
+        "id": "expanded_doc_pregnancy_2",
+        "title": "pregnancy_exercise健康知识",
+        "content": "孕期运动应结合个体情况选择适宜强度，并遵循医生建议和危险信号。",
+        "source": "curated health guideline",
+        "metadata": {
+          "topic": "pregnancy_exercise",
+          "source_type": "guideline",
+          "risk_level": "low"
+        }
+      }
+    ]
   }
 ]
