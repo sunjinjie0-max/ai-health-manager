@@ -14,8 +14,9 @@
 
 ## 2. 仓库与环境现状
 
-- GitHub 远端分支 `fix/environment-exercise-consistency` 已删除，不从该分支继续开发，也不直接恢复其中实现。
-- 0705 本地目录仍有未提交的环境/运动改动，为避免数据丢失暂不删除；如需借鉴，只允许逐段审查后重新实现。
+- GitHub 远端和 0705 本地的 `fix/environment-exercise-consistency` 分支均已删除，不从该分支继续开发，也不直接恢复其中实现；清理前的未提交内容仅存于本地可恢复 stash。
+- 0705 已停用：没有属于 0705 的运行中 Docker 容器，工作目录切换到唯一保留的 `fix/nutrition-agent-timeout-status` 分支，仅作为历史备份，不再作为构建或测试入口。
+- 0910 是唯一活动项目；其 Nutrition Agent 源码和 `plan_tasks.py` 已与 0705 营养分支逐字节核对一致（排除 Python 缓存文件）。
 - 当前代码已使用 0910 的 `.env` 构建 Docker；`.dockerignore` 已排除 `.env` 和 `.env.*`，镜像内确认不存在 `/app/.env`。
 - 0705 营养 Agent 已迁入当前项目，营养任务超时从 20 秒调整为 60 秒，并补充通用营养问答与澄清路径。
 - 当前后端单元测试结果为 `125 passed, 1 warning`。
