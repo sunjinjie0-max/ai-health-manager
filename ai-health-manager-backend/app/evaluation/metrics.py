@@ -178,15 +178,27 @@ def aggregate_results(case_results: list[dict[str, Any]]) -> dict[str, Any]:
         if scores
     }
     overall = round(sum(metrics.values()) / len(metrics), 4) if metrics else 0.0
+    product_failed_cases = [
+        case["id"]
+        for case in case_results
+        if any(not metric["passed"] for metric in case["metrics"])
+    ]
+    evaluation_error_cases = [
+        case["id"]
+        for case in case_results
+        if (
+            ((case.get("predictions") or {}).get("llm_judge") or {}).get("judge_status")
+            == "evaluation_error"
+        )
+    ]
     return {
         "overall_score": overall,
         "metrics": metrics,
         "case_count": len(case_results),
-        "failed_cases": [
-            case["id"]
-            for case in case_results
-            if any(not metric["passed"] for metric in case["metrics"])
-        ],
+        "failed_cases": product_failed_cases,
+        "product_failed_cases": product_failed_cases,
+        "evaluation_error_cases": evaluation_error_cases,
+        "evaluation_infrastructure_passed": not evaluation_error_cases,
     }
 
 

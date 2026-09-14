@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
+import math
 from typing import Any
 
 from app.evaluation.metrics import MetricResult, score_threshold_metric
 from app.llm.deepseek import deepseek_client
 
+
+logger = logging.getLogger(__name__)
 
 JUDGE_METRIC_KEYS = (
     "answer_relevancy",
@@ -16,6 +20,7 @@ JUDGE_METRIC_KEYS = (
     "citation_correctness",
     "overall",
 )
+JUDGE_MAX_ATTEMPTS = 2
 
 JUDGE_SYSTEM_PROMPT = """你是健康管理 Agent 的评估员。请基于用户问题、候选回答、参考答案和检索上下文进行评分。
 
@@ -40,11 +45,57 @@ JUDGE_SYSTEM_PROMPT = """你是健康管理 Agent 的评估员。请基于用户
 """
 
 
-def _clamp_score(value: Any) -> float:
-    try:
-        return max(0.0, min(1.0, float(value)))
-    except (TypeError, ValueError):
-        return 0.0
+class JudgeResultError(ValueError):
+    """Raised when a Judge response does not satisfy the evaluation contract."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+
+
+def _validate_judge_result(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        raise JudgeResultError("invalid_json", "Judge result must be a JSON object")
+
+    if "raw_response" in raw:
+        raw_text = str(raw.get("raw_response") or "").strip()
+        error_code = "empty_response" if not raw_text else "invalid_json"
+        raise JudgeResultError(error_code, "Judge returned invalid JSON")
+
+    required_keys = (*JUDGE_METRIC_KEYS, "reason")
+    missing_keys = [key for key in required_keys if key not in raw]
+    if missing_keys:
+        raise JudgeResultError(
+            "missing_fields",
+            f"Judge result is missing fields: {', '.join(missing_keys)}",
+        )
+
+    result: dict[str, Any] = {}
+    for key in JUDGE_METRIC_KEYS:
+        value = raw[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise JudgeResultError(
+                "invalid_score_type",
+                f"Judge score {key} must be numeric",
+            )
+        normalized = float(value)
+        if not math.isfinite(normalized) or not 0.0 <= normalized <= 1.0:
+            raise JudgeResultError(
+                "score_out_of_range",
+                f"Judge score {key} must be between 0 and 1",
+            )
+        result[key] = normalized
+
+    reason = raw["reason"]
+    if not isinstance(reason, str):
+        raise JudgeResultError("invalid_field_type", "Judge reason must be a string")
+    result["reason"] = reason
+    return result
+
+
+def _request_error_code(exc: Exception) -> str:
+    error_name = type(exc).__name__.lower()
+    return "timeout" if isinstance(exc, TimeoutError) or "timeout" in error_name else "request_failed"
 
 
 def _format_contexts(retrieved_docs: list[dict[str, Any]], max_chars: int = 4000) -> str:
@@ -80,22 +131,50 @@ async def judge_answer(
     reference_response: str = "",
     retrieved_docs: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    raw = await deepseek_client.json_chat(
-        JUDGE_SYSTEM_PROMPT,
-        build_judge_prompt(
-            query=query,
-            answer=answer,
-            reference_response=reference_response,
-            retrieved_docs=retrieved_docs,
-        ),
-        stage="evaluation.llm_judge",
+    prompt = build_judge_prompt(
+        query=query,
+        answer=answer,
+        reference_response=reference_response,
+        retrieved_docs=retrieved_docs,
     )
-    result = {
-        key: _clamp_score(raw.get(key))
-        for key in JUDGE_METRIC_KEYS
+    last_error: dict[str, str] = {
+        "code": "unknown_error",
+        "message": "Judge failed without an error detail",
     }
-    result["reason"] = str(raw.get("reason") or raw.get("raw_response") or "")
-    return result
+
+    for attempt in range(1, JUDGE_MAX_ATTEMPTS + 1):
+        try:
+            raw = await deepseek_client.json_chat(
+                JUDGE_SYSTEM_PROMPT,
+                prompt,
+                stage="evaluation.llm_judge",
+            )
+            validated = _validate_judge_result(raw)
+            return {
+                "judge_status": "ok",
+                "attempts": attempt,
+                **validated,
+            }
+        except JudgeResultError as exc:
+            last_error = {"code": exc.code, "message": str(exc)}
+        except Exception as exc:
+            last_error = {
+                "code": _request_error_code(exc),
+                "message": str(exc),
+            }
+
+        logger.warning(
+            "[evaluation] Judge attempt failed attempt=%d/%d code=%s",
+            attempt,
+            JUDGE_MAX_ATTEMPTS,
+            last_error["code"],
+        )
+
+    return {
+        "judge_status": "evaluation_error",
+        "attempts": JUDGE_MAX_ATTEMPTS,
+        "error": last_error,
+    }
 
 
 def judge_metrics(
@@ -103,6 +182,9 @@ def judge_metrics(
     threshold: float = 0.8,
     metric_keys: tuple[str, ...] | None = None,
 ) -> list[MetricResult]:
+    if judge_result.get("judge_status") != "ok":
+        return []
+
     metrics: list[MetricResult] = []
     for key in metric_keys or JUDGE_METRIC_KEYS:
         metrics.append(

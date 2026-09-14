@@ -115,6 +115,8 @@ async def test_llm_judge_option_adds_quality_metrics(monkeypatch):
         assert kwargs["query"] == case.query
         assert kwargs["answer"] == case.reference_response
         return {
+            "judge_status": "ok",
+            "attempts": 1,
             "answer_relevancy": 0.95,
             "faithfulness": 0.9,
             "safety": 1.0,
@@ -132,6 +134,53 @@ async def test_llm_judge_option_adds_quality_metrics(monkeypatch):
         metric["passed"]
         for metric in result["metrics"]
         if metric["name"].startswith("judge_")
+    )
+
+
+@pytest.mark.asyncio
+async def test_judge_failure_is_reported_as_evaluation_error(tmp_path, monkeypatch):
+    dataset_path = tmp_path / "judge_infrastructure_failure.json"
+    dataset_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "judge_infrastructure_failure_001",
+                    "query": "如何保持健康？",
+                    "expected": {
+                        "intent": "general_health",
+                        "urgent": False,
+                        "prompt_injection": False,
+                        "task_agents": [],
+                    },
+                    "reference_response": "保持规律作息、均衡饮食和适量活动。",
+                }
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    async def fake_judge_answer(**kwargs):
+        return {
+            "judge_status": "evaluation_error",
+            "attempts": 2,
+            "error": {"code": "timeout", "message": "timed out"},
+        }
+
+    monkeypatch.setattr("app.evaluation.health_advisor.judge_answer", fake_judge_answer)
+
+    report = await run_evaluation(dataset_path, llm_judge=True, min_score=0.85)
+
+    assert report["summary"]["overall_score"] == 1.0
+    assert report["summary"]["product_failed_cases"] == []
+    assert report["summary"]["product_passed"] is True
+    assert report["summary"]["evaluation_error_cases"] == [
+        "judge_infrastructure_failure_001"
+    ]
+    assert report["summary"]["evaluation_infrastructure_passed"] is False
+    assert report["summary"]["passed"] is False
+    assert not any(
+        metric["name"].startswith("judge_") for metric in report["cases"][0]["metrics"]
     )
 
 

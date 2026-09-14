@@ -31,7 +31,6 @@ from app.evaluation.metrics import (
     rag_doc_hit_metric,
     rag_topic_hit_metric,
     response_terms_metric,
-    score_threshold_metric,
 )
 from app.evaluation.e2e_agent import run_health_advisor_replay
 from app.evaluation.failure_feedback import (
@@ -246,27 +245,34 @@ async def evaluate_case(
                     metric_keys=judge_metric_keys,
                 )
             )
-            logger.info(
-                "[evaluation] LLM judge finished case=%s overall=%s",
-                case.id,
-                llm_judge_report.get("overall"),
-            )
+            if llm_judge_report.get("judge_status") == "evaluation_error":
+                logger.error(
+                    "[evaluation] LLM judge unavailable case=%s error=%s",
+                    case.id,
+                    llm_judge_report.get("error"),
+                )
+            else:
+                logger.info(
+                    "[evaluation] LLM judge finished case=%s overall=%s",
+                    case.id,
+                    llm_judge_report.get("overall"),
+                )
         except Exception as exc:
             llm_judge_report = {
-                "error": type(exc).__name__,
-                "message": str(exc),
+                "judge_status": "evaluation_error",
+                "attempts": 0,
+                "error": {
+                    "code": "unexpected_error",
+                    "type": type(exc).__name__,
+                    "message": str(exc),
+                },
             }
-            metrics.append(
-                score_threshold_metric(
-                    "judge_available",
-                    0.0,
-                    threshold=1.0,
-                    details=llm_judge_report,
-                )
-            )
             logger.exception("[evaluation] LLM judge failed case=%s", case.id)
     elif llm_judge:
-        llm_judge_report = {"skipped": True, "reason": "Case has no answer text to judge."}
+        llm_judge_report = {
+            "judge_status": "skipped",
+            "reason": "Case has no answer text to judge.",
+        }
         logger.info("[evaluation] LLM judge skipped case=%s reason=no_answer", case.id)
 
     result = {
@@ -341,7 +347,12 @@ async def run_evaluation(
         case_results.append(case_result)
 
     summary = aggregate_results(case_results)
-    summary["passed"] = summary["overall_score"] >= min_score and not summary["failed_cases"]
+    summary["product_passed"] = (
+        summary["overall_score"] >= min_score and not summary["product_failed_cases"]
+    )
+    summary["passed"] = (
+        summary["product_passed"] and summary["evaluation_infrastructure_passed"]
+    )
     summary["min_score"] = min_score
     summary["llm_usage"] = aggregate_usage_summaries(
         [case_result.get("llm_usage") for case_result in case_results]
@@ -418,6 +429,14 @@ async def run_evaluation_suite(
             for name, report in reports.items()
         }
         passed = all(report["summary"]["passed"] for report in reports.values())
+        product_passed = all(
+            report["summary"]["product_passed"] for report in reports.values()
+        )
+        evaluation_errors = {
+            name: report["summary"]["evaluation_error_cases"]
+            for name, report in reports.items()
+            if report["summary"]["evaluation_error_cases"]
+        }
         overall = round(sum(suite_scores.values()) / len(suite_scores), 4) if suite_scores else 0.0
         llm_usage = aggregate_usage_summaries(
             [report.get("llm_usage") for report in reports.values()]
@@ -428,6 +447,9 @@ async def run_evaluation_suite(
                 "overall_score": overall,
                 "suite_scores": suite_scores,
                 "passed": passed,
+                "product_passed": product_passed,
+                "evaluation_infrastructure_passed": not evaluation_errors,
+                "evaluation_error_cases": evaluation_errors,
                 "min_score": min_score,
                 "llm_usage": llm_usage,
             },

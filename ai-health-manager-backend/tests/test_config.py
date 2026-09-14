@@ -1,8 +1,13 @@
 from app.config import Settings
 
 
-def test_settings_loads_defaults():
-    s = Settings(deepseek_api_key="k", jwt_secret_key="s")
+def test_settings_loads_defaults(monkeypatch):
+    monkeypatch.delenv("DEEPSEEK_BASE_URL", raising=False)
+    s = Settings(
+        _env_file=None,
+        deepseek_api_key="k",
+        jwt_secret_key="s",
+    )
     assert s.deepseek_base_url == "https://api.deepseek.com"
     assert s.jwt_algorithm == "HS256"
     assert s.jwt_expire_hours == 24
