@@ -74,7 +74,12 @@ INTENT_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
 def heuristic_intent(query: str) -> str:
     """Classify intent without calling an LLM, for CI-safe offline evaluation."""
     lowered = query.lower()
+    is_urgent, _ = _check_urgent_keywords(lowered)
+    if is_urgent:
+        return "urgent_concern"
     for intent, keywords in INTENT_KEYWORDS:
+        if intent == "urgent_concern":
+            continue
         if any(keyword in lowered for keyword in keywords):
             return intent
     return "general_health"

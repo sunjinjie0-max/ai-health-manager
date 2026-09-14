@@ -22,6 +22,79 @@ URGENT_KEYWORDS = [
     "120", "急救", "急诊",
 ]
 
+CLAUSE_BOUNDARIES = ("。", "！", "!", "？", "?", "；", ";", "，", ",", "但是", "但")
+NEGATION_CUES = (
+    "没有明显",
+    "没有",
+    "没出现",
+    "未出现",
+    "未见明显",
+    "未见",
+    "未发现",
+    "并无",
+    "否认存在",
+    "否认有",
+    "否认",
+    "不存在",
+    "不伴有",
+    "不伴",
+    "不再",
+    "无明显",
+    "无",
+)
+NEGATION_REVERSAL_CUES = (
+    "不是没有",
+    "不是无",
+    "并非没有",
+    "并非无",
+    "不能说没有",
+    "没有否认",
+    "未否认",
+    "不能排除",
+    "不排除",
+)
+HISTORICAL_CUES = ("以前", "曾经", "既往", "去年", "前年", "小时候", "过去", "有过")
+RESOLVED_CUES = ("已经好了", "已好转", "已缓解", "已消失", "现在没有")
+HYPOTHETICAL_CUES = ("如果", "假如", "假设", "若出现", "万一", "什么情况下", "如何判断")
+CURRENT_CUES = ("现在", "目前", "此刻", "正在", "突然", "刚刚", "刚才")
+
+
+def _clause_prefix(message: str, keyword_start: int, max_chars: int = 20) -> str:
+    start = 0
+    for boundary in CLAUSE_BOUNDARIES:
+        position = message.rfind(boundary, 0, keyword_start)
+        if position >= 0:
+            start = max(start, position + len(boundary))
+    return message[start:keyword_start][-max_chars:].strip()
+
+
+def _clause_suffix(message: str, keyword_end: int, max_chars: int = 16) -> str:
+    end = len(message)
+    for boundary in CLAUSE_BOUNDARIES:
+        position = message.find(boundary, keyword_end)
+        if position >= 0:
+            end = min(end, position)
+    return message[keyword_end:end][:max_chars].strip()
+
+
+def _describes_current_symptom(message: str, keyword_start: int, keyword_end: int) -> bool:
+    prefix = _clause_prefix(message, keyword_start)
+    suffix = _clause_suffix(message, keyword_end)
+
+    if any(cue in prefix for cue in NEGATION_REVERSAL_CUES):
+        return True
+    if any(prefix.endswith(cue) for cue in NEGATION_CUES):
+        return False
+
+    has_current_cue = any(cue in prefix for cue in CURRENT_CUES)
+    if not has_current_cue and any(cue in prefix for cue in HYPOTHETICAL_CUES):
+        return False
+    if not has_current_cue and any(cue in prefix for cue in HISTORICAL_CUES):
+        return False
+    if suffix.startswith("史") or any(cue in suffix for cue in RESOLVED_CUES):
+        return False
+    return True
+
 
 def _check_urgent_keywords(message: str) -> tuple[bool, str]:
     """Check if message contains urgent keywords.
@@ -31,8 +104,15 @@ def _check_urgent_keywords(message: str) -> tuple[bool, str]:
     """
     message_lower = message.lower()
     for keyword in URGENT_KEYWORDS:
-        if keyword in message_lower:
-            return True, f"检测到紧急关键词: {keyword}"
+        search_start = 0
+        while True:
+            keyword_start = message_lower.find(keyword, search_start)
+            if keyword_start < 0:
+                break
+            keyword_end = keyword_start + len(keyword)
+            if _describes_current_symptom(message_lower, keyword_start, keyword_end):
+                return True, f"检测到当前紧急症状: {keyword}"
+            search_start = keyword_end
     return False, ""
 
 

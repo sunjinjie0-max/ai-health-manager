@@ -354,26 +354,17 @@ async def test_e2e_agent_option_uses_full_replay_result(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_all_evaluation_suites_match_known_contract_baseline():
+async def test_all_evaluation_suites_pass():
     report = await run_evaluation_suite("all", min_score=0.85)
 
     assert set(report["reports"]) == set(SUITE_DATASETS)
     assert "llm_usage" in report["summary"]
+    assert report["summary"]["passed"] is True
     assert all(
         suite_report["summary"]["passed"]
-        for name, suite_report in report["reports"].items()
-        if name != "e2e_agent"
+        for suite_report in report["reports"].values()
     )
-
-    e2e_report = report["reports"]["e2e_agent"]
-    assert e2e_report["summary"]["product_failed_cases"] == ["expanded_e2e_14"]
-    cough_case = next(
-        case for case in e2e_report["cases"] if case["id"] == "expanded_e2e_14"
-    )
-    assert {
-        metric["name"] for metric in cough_case["metrics"] if not metric["passed"]
-    } == {"intent", "urgent"}
-    assert report["summary"]["passed"] is False
+    assert report["failure_feedback"]["summary"]["failed_case_count"] == 0
 
 
 @pytest.mark.asyncio

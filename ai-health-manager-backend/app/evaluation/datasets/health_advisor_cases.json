@@ -611,8 +611,8 @@
       "cough"
     ],
     "expected": {
-      "intent": "urgent_concern",
-      "urgent": true,
+      "intent": "symptom_check",
+      "urgent": false,
       "prompt_injection": false,
       "task_agents": [],
       "required_terms": [

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 
 from app.agents.health_advisor.agent import HealthAdvisorAgent
 from app.agents.health_advisor.state import HealthAdvisorState
-from app.agents.health_advisor.nodes.check_safety import check_safety
+from app.agents.health_advisor.nodes.check_safety import _check_urgent_keywords, check_safety
 from app.agents.health_advisor.nodes.classify_intent import classify_intent
 from app.agents.health_advisor.nodes.memory_route import memory_route
 from app.agents.health_advisor.nodes.generate_response import (
@@ -438,6 +438,36 @@ class TestCheckSafetyNode:
         # Should proceed to classify_intent (handled by LLM in real implementation)
         # For MVP, we check the next_node is set
         assert "next_node" in result
+
+    @pytest.mark.parametrize(
+        ("message", "expected_urgent"),
+        [
+            ("我现在胸痛而且呼吸困难。", True),
+            ("咳嗽持续一周但没有呼吸困难。", False),
+            ("咳嗽三天，目前没有明显呼吸困难。", False),
+            ("我不是没有呼吸困难，刚才越来越喘。", True),
+            ("去年曾经胸痛，现在已经好了。", False),
+            ("既往有胸痛史，目前没有胸痛。", False),
+            ("我替妈妈问，她现在胸痛并且呼吸困难。", True),
+            ("如果以后出现胸痛或呼吸困难应该怎么办？", False),
+            ("没有胸痛，但现在呼吸困难并且头晕。", True),
+        ],
+        ids=[
+            "affirmed-current",
+            "negated",
+            "negated-with-degree",
+            "double-negation",
+            "history",
+            "history-and-current-negation",
+            "other-person-current",
+            "hypothetical",
+            "mixed-symptoms",
+        ],
+    )
+    def test_urgent_keyword_semantics(self, message, expected_urgent):
+        is_urgent, _ = _check_urgent_keywords(message)
+
+        assert is_urgent is expected_urgent
 
     @pytest.mark.asyncio
     @patch("app.agents.health_advisor.nodes.check_safety.deepseek_client")

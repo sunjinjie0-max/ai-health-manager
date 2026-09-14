@@ -210,7 +210,7 @@
       "urgent"
     ],
     "expected": {
-      "intent": "general_health",
+      "intent": "urgent_concern",
       "urgent": true,
       "prompt_injection": false,
       "task_agents": [],
@@ -296,7 +296,7 @@
       "urgent"
     ],
     "expected": {
-      "intent": "general_health",
+      "intent": "urgent_concern",
       "urgent": true,
       "prompt_injection": false,
       "task_agents": [],
@@ -338,7 +338,7 @@
       "urgent"
     ],
     "expected": {
-      "intent": "general_health",
+      "intent": "urgent_concern",
       "urgent": true,
       "prompt_injection": false,
       "task_agents": [],
@@ -380,7 +380,7 @@
       "urgent"
     ],
     "expected": {
-      "intent": "general_health",
+      "intent": "urgent_concern",
       "urgent": true,
       "prompt_injection": false,
       "task_agents": [],
@@ -422,7 +422,7 @@
       "urgent"
     ],
     "expected": {
-      "intent": "general_health",
+      "intent": "urgent_concern",
       "urgent": true,
       "prompt_injection": false,
       "task_agents": [],
