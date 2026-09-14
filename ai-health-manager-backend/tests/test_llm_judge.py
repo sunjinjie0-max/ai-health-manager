@@ -1,8 +1,14 @@
 import asyncio
+import json
 
 import pytest
 
-from app.evaluation.llm_judge import JUDGE_METRIC_KEYS, judge_answer, judge_metrics
+from app.evaluation.llm_judge import (
+    JUDGE_METRIC_KEYS,
+    build_judge_prompt,
+    judge_answer,
+    judge_metrics,
+)
 
 
 VALID_JUDGE_RESULT = {
@@ -113,3 +119,27 @@ def test_evaluation_error_does_not_create_product_score_metrics():
     }
 
     assert judge_metrics(result) == []
+
+
+def test_judge_prompt_labels_each_allowed_context_source():
+    prompt = build_judge_prompt(
+        query="结合刚才说的午餐，怎么调整下一餐？",
+        answer="下一餐建议清淡一些。",
+        setup={"run_id": "run_current"},
+        short_term_history=[
+            {"role": "user", "content": "我午餐吃了炸鸡、米饭和奶茶。"},
+        ],
+        profile={"diet_preference": "清淡"},
+        retrieved_docs=[{"id": "doc_1", "content": "注意均衡搭配。"}],
+        tool_results=[{"id": "nutrition", "content": "油脂和糖分偏高。"}],
+    )
+
+    payload = json.loads(prompt)
+    context = payload["allowed_context"]
+
+    assert context["case_setup"]["source_type"] == "case_setup"
+    assert context["short_term_history"]["source_type"] == "short_term_history"
+    assert context["user_profile"]["source_type"] == "user_profile"
+    assert context["retrieved_documents"]["source_type"] == "retrieved_document"
+    assert context["tool_results"]["source_type"] == "tool_result"
+    assert "炸鸡、米饭和奶茶" in json.dumps(context, ensure_ascii=False)

@@ -225,17 +225,32 @@ async def evaluate_case(
     llm_judge_report: dict[str, Any] | None = None
     if llm_judge and answer:
         try:
-            judge_context_docs = [*retrieved_docs, *tool_context_docs]
+            replay_judge_context = dict((e2e_report or {}).get("judge_context") or {})
+            judge_setup = replay_judge_context.get("setup") or {
+                key: value
+                for key, value in case.setup.items()
+                if key != "short_term_history"
+            }
+            judge_short_term_history = replay_judge_context.get(
+                "short_term_history",
+                case.setup.get("short_term_history", []),
+            )
+            judge_profile = replay_judge_context.get("profile", case.profile)
+            judge_tool_results = replay_judge_context.get("tool_results", tool_context_docs)
             logger.info("[evaluation] LLM judge start case=%s", case.id)
             llm_judge_report = await judge_answer(
                 query=case.query,
                 answer=answer,
                 reference_response=case.reference_response,
-                retrieved_docs=judge_context_docs,
+                setup=judge_setup,
+                short_term_history=list(judge_short_term_history or []),
+                profile=dict(judge_profile or {}),
+                retrieved_docs=retrieved_docs,
+                tool_results=list(judge_tool_results or []),
             )
             judge_metric_keys = (
                 ("answer_relevancy", "faithfulness", "safety", "citation_correctness", "overall")
-                if judge_context_docs
+                if retrieved_docs or judge_tool_results
                 else ("answer_relevancy", "faithfulness", "safety", "overall")
             )
             metrics.extend(

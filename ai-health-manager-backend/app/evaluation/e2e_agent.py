@@ -120,6 +120,12 @@ async def run_health_advisor_replay(
     aggregated_context = dict(final_state.get("aggregated_agent_context", {}))
     safety_flag = final_state.get("safety_flag") or {}
     prompt_security = final_state.get("prompt_security") or {}
+    tool_context_docs = _tool_context_docs(aggregated_context)
+    judge_setup = {
+        key: value
+        for key, value in case.setup.items()
+        if key != "short_term_history"
+    }
 
     return {
         "elapsed_ms": elapsed_ms,
@@ -135,7 +141,13 @@ async def run_health_advisor_replay(
         "orchestration_status": final_state.get("orchestration_status"),
         "completed_agents": _completed_agents(agent_trace, sub_agent_results),
         "agent_trace": agent_trace,
-        "tool_context_docs": _tool_context_docs(aggregated_context),
+        "tool_context_docs": tool_context_docs,
+        "judge_context": {
+            "setup": judge_setup,
+            "short_term_history": short_history,
+            "profile": case.profile,
+            "tool_results": tool_context_docs,
+        },
         "citations": final_state.get("citations", []),
         "suggested_questions": final_state.get("suggested_questions", []),
         "stored_memory_ids": final_state.get("stored_memory_ids", []),

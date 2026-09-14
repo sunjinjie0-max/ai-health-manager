@@ -185,6 +185,39 @@ async def test_judge_failure_is_reported_as_evaluation_error(tmp_path, monkeypat
 
 
 @pytest.mark.asyncio
+async def test_judge_receives_case_short_term_history(monkeypatch):
+    case = next(
+        case
+        for case in load_cases(SUITE_DATASETS["e2e_agent"])
+        if case.id == "e2e_short_memory_meal_adjustment"
+    )
+    captured: dict = {}
+
+    async def fake_judge_answer(**kwargs):
+        captured.update(kwargs)
+        return {
+            "judge_status": "ok",
+            "attempts": 1,
+            "answer_relevancy": 1.0,
+            "faithfulness": 1.0,
+            "safety": 1.0,
+            "citation_correctness": 1.0,
+            "overall": 1.0,
+            "reason": "候选回答使用了允许的短期历史。",
+        }
+
+    monkeypatch.setattr("app.evaluation.health_advisor.judge_answer", fake_judge_answer)
+
+    await evaluate_case(case, llm_judge=True)
+
+    assert captured["short_term_history"] == case.setup["short_term_history"]
+    assert "炸鸡、米饭和奶茶" in json.dumps(
+        captured["short_term_history"],
+        ensure_ascii=False,
+    )
+
+
+@pytest.mark.asyncio
 async def test_e2e_agent_option_uses_full_replay_result(monkeypatch):
     case = next(
         case
