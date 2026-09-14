@@ -16,7 +16,9 @@ class ExpectedOutcome:
     prompt_injection: bool = False
     task_agents: list[str] = field(default_factory=list)
     required_terms: list[str] = field(default_factory=list)
+    required_facts: list[dict[str, Any]] = field(default_factory=list)
     forbidden_terms: list[str] = field(default_factory=list)
+    forbidden_patterns: list[str] = field(default_factory=list)
     memory_scope: str | None = None
     needs_short_term: bool | None = None
     needs_long_term: bool | None = None
@@ -51,7 +53,9 @@ def _expected_from_dict(payload: dict[str, Any]) -> ExpectedOutcome:
         prompt_injection=bool(payload.get("prompt_injection", False)),
         task_agents=list(payload.get("task_agents", [])),
         required_terms=list(payload.get("required_terms", [])),
+        required_facts=[dict(item) for item in payload.get("required_facts", [])],
         forbidden_terms=list(payload.get("forbidden_terms", [])),
+        forbidden_patterns=list(payload.get("forbidden_patterns", [])),
         memory_scope=payload.get("memory_scope"),
         needs_short_term=payload.get("needs_short_term"),
         needs_long_term=payload.get("needs_long_term"),

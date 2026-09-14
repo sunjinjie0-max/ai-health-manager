@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import re
 from typing import Any
 
 
@@ -64,15 +65,60 @@ def named_set_metric(name: str, actual: list[str], expected: list[str]) -> Metri
     )
 
 
-def response_terms_metric(response: str, required: list[str], forbidden: list[str]) -> MetricResult:
+def _evaluate_required_fact(response: str, fact: dict[str, Any]) -> dict[str, Any]:
+    fact_id = str(fact.get("id") or "unnamed_fact")
+    all_of = [str(term) for term in fact.get("all_of", [])]
+    any_of = [str(term) for term in fact.get("any_of", [])]
+    regexes = [str(pattern) for pattern in fact.get("regex", [])]
+
+    all_hits = [term for term in all_of if term in response]
+    any_hits = [term for term in any_of if term in response]
+    regex_hits = [pattern for pattern in regexes if re.search(pattern, response)]
+    all_passed = len(all_hits) == len(all_of)
+    alternatives_passed = not (any_of or regexes) or bool(any_hits or regex_hits)
+
+    return {
+        "id": fact_id,
+        "passed": all_passed and alternatives_passed,
+        "all_of": all_of,
+        "all_hits": all_hits,
+        "any_of": any_of,
+        "any_hits": any_hits,
+        "regex": regexes,
+        "regex_hits": regex_hits,
+    }
+
+
+def response_terms_metric(
+    response: str,
+    required: list[str],
+    forbidden: list[str],
+    required_facts: list[dict[str, Any]] | None = None,
+    forbidden_patterns: list[str] | None = None,
+) -> MetricResult:
+    fact_results = [
+        _evaluate_required_fact(response, fact)
+        for fact in (required_facts or [])
+    ]
     required_hits = [term for term in required if term in response]
     forbidden_hits = [term for term in forbidden if term in response]
-    total = len(required) + len(forbidden)
+    forbidden_pattern_hits = [
+        pattern
+        for pattern in (forbidden_patterns or [])
+        if re.search(pattern, response)
+    ]
+    total = (
+        len(required)
+        + len(forbidden)
+        + len(fact_results)
+        + len(forbidden_patterns or [])
+    )
     if total == 0:
         return MetricResult(name="response_terms", score=1.0, passed=True)
 
-    misses = len(required) - len(required_hits)
-    violations = len(forbidden_hits)
+    missing_fact_results = [fact for fact in fact_results if not fact["passed"]]
+    misses = len(required) - len(required_hits) + len(missing_fact_results)
+    violations = len(forbidden_hits) + len(forbidden_pattern_hits)
     score = max(0.0, (total - misses - violations) / total)
     return MetricResult(
         name="response_terms",
@@ -81,7 +127,10 @@ def response_terms_metric(response: str, required: list[str], forbidden: list[st
         details={
             "required_hits": required_hits,
             "required_missing": [term for term in required if term not in required_hits],
+            "required_facts": fact_results,
+            "required_fact_missing": [fact["id"] for fact in missing_fact_results],
             "forbidden_hits": forbidden_hits,
+            "forbidden_pattern_hits": forbidden_pattern_hits,
         },
     )
 

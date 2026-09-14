@@ -185,7 +185,13 @@ async def evaluate_case(
             case.expected.prompt_injection,
         ),
         agent_set_metric(predicted_agents, case.expected.task_agents),
-        response_terms_metric(answer, case.expected.required_terms, case.expected.forbidden_terms),
+        response_terms_metric(
+            answer,
+            case.expected.required_terms,
+            case.expected.forbidden_terms,
+            case.expected.required_facts,
+            case.expected.forbidden_patterns,
+        ),
     ]
     optional_metrics = [
         optional_exact_match_metric("memory_scope", memory_policy.get("scope"), case.expected.memory_scope),

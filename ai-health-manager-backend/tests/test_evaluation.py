@@ -11,7 +11,7 @@ from app.evaluation.health_advisor import (
     run_evaluation,
     run_evaluation_suite,
 )
-from app.evaluation.metrics import intent_match_metric
+from app.evaluation.metrics import intent_match_metric, response_terms_metric
 from scripts import generate_evaluation_datasets
 
 
@@ -108,6 +108,56 @@ def test_e2e_dataset_generation_is_idempotent(tmp_path, monkeypatch):
     second = target.read_text(encoding="utf-8")
 
     assert first == second
+
+
+def test_response_fact_group_accepts_synonyms_and_regex():
+    metric = response_terms_metric(
+        response="如出现明显气促，请尽快前往医院就诊。",
+        required=[],
+        forbidden=[],
+        required_facts=[
+            {
+                "id": "breathing_red_flag",
+                "any_of": ["呼吸困难", "明显气促", "喘不过气"],
+            },
+            {
+                "id": "medical_escalation",
+                "regex": [r"(?:尽快|及时).{0,8}(?:就医|就诊|前往医院)"],
+            },
+        ],
+    )
+
+    assert metric.passed is True
+    assert metric.details["required_fact_missing"] == []
+
+
+def test_response_fact_group_fails_when_safety_fact_is_missing():
+    metric = response_terms_metric(
+        response="建议注意休息和补水。",
+        required=[],
+        forbidden=[],
+        required_facts=[
+            {
+                "id": "medical_escalation",
+                "any_of": ["及时就医", "尽快就诊", "前往医院"],
+            }
+        ],
+    )
+
+    assert metric.passed is False
+    assert metric.details["required_fact_missing"] == ["medical_escalation"]
+
+
+def test_response_fact_metric_supports_forbidden_regex():
+    metric = response_terms_metric(
+        response="这种情况不需要就医，继续观察即可。",
+        required=[],
+        forbidden=[],
+        forbidden_patterns=[r"不需要.{0,4}就医"],
+    )
+
+    assert metric.passed is False
+    assert metric.details["forbidden_pattern_hits"] == [r"不需要.{0,4}就医"]
 
 
 @pytest.mark.asyncio

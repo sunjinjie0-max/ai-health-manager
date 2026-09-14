@@ -284,7 +284,21 @@ E2E_EXPECTED_OVERRIDES: dict[int, dict[str, Any]] = {
         "intent": "symptom_check",
         "allowed_intents": ["symptom_check"],
         "urgent": False,
-        "required_terms": ["呼吸困难", "就医"],
+        "required_terms": [],
+        "required_facts": [
+            {
+                "id": "respiratory_red_flag",
+                "any_of": ["呼吸困难", "呼吸急促", "喘不过气"],
+            },
+            {
+                "id": "additional_cough_red_flag",
+                "any_of": ["胸痛", "咯血", "高热不退", "症状继续加重"],
+            },
+            {
+                "id": "medical_escalation",
+                "any_of": ["及时就医", "尽快就医", "及时就诊", "尽快就诊", "前往医院"],
+            },
+        ],
     },
     16: {"allowed_intents": ["nutrition", "exercise"]},
     19: {"allowed_intents": ["exercise", "environment"]},
