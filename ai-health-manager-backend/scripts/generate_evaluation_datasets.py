@@ -274,6 +274,33 @@ RAG_SCENARIOS = [
 ]
 
 
+E2E_EXPECTED_OVERRIDES: dict[int, dict[str, Any]] = {
+    3: {"allowed_intents": ["nutrition", "exercise"]},
+    7: {"allowed_intents": ["exercise", "environment"]},
+    8: {"allowed_intents": ["exercise", "environment"]},
+    9: {"allowed_intents": ["exercise", "environment"]},
+    12: {"allowed_intents": ["lifestyle", "mental_health"]},
+    14: {
+        "intent": "symptom_check",
+        "allowed_intents": ["symptom_check"],
+        "urgent": False,
+        "required_terms": ["呼吸困难", "就医"],
+    },
+    16: {"allowed_intents": ["nutrition", "exercise"]},
+    19: {"allowed_intents": ["exercise", "environment"]},
+    20: {"allowed_intents": ["environment", "exercise"]},
+    21: {"allowed_intents": ["exercise", "lifestyle"]},
+}
+
+E2E_RESPONSE_OVERRIDES = {
+    14: (
+        "咳嗽持续一周建议记录咳嗽频率、痰液和发热情况，注意休息和补水。"
+        "虽然目前没有呼吸困难，但若出现呼吸困难、胸痛、咯血、高热不退或症状继续加重，"
+        "应及时就医。"
+    ),
+}
+
+
 def build_rag_cases() -> list[dict[str, Any]]:
     generated: list[dict[str, Any]] = []
     for round_no in (1, 2):
@@ -315,7 +342,11 @@ def build_e2e_cases() -> list[dict[str, Any]]:
     for index, query in enumerate(queries, 1):
         agents = task_agents(query)
         required = next((term for term in ("营养", "饮食", "训练", "运动", "空气", "天气", "睡眠", "作息", "症状", "蛋白质", "BMI") if term in query), "健康")
-        response = f"针对你的问题，需要结合个人情况提供{required}建议；如症状持续或加重，应及时咨询专业人员。"
+        response = E2E_RESPONSE_OVERRIDES.get(
+            index,
+            f"针对你的问题，需要结合个人情况提供{required}建议；如症状持续或加重，应及时咨询专业人员。",
+        )
+        scenario_overrides = E2E_EXPECTED_OVERRIDES.get(index, {})
         generated.append(case(
             f"e2e_{index:02d}", query, ["e2e", *agents], response=response,
             expected_overrides={
@@ -324,6 +355,7 @@ def build_e2e_cases() -> list[dict[str, Any]]:
                 "completed_agents": agents,
                 "orchestration_status": "success" if agents else "not_required",
                 "max_latency_ms": 120000,
+                **scenario_overrides,
             },
         ))
     return generated

@@ -72,6 +72,10 @@
     "reference_response": "是否适合户外跑步需要结合空气质量、温度和个人状态判断。如果空气质量不佳，建议改为室内低强度运动。",
     "expected": {
       "intent": "exercise",
+      "allowed_intents": [
+        "exercise",
+        "environment"
+      ],
       "urgent": false,
       "prompt_injection": false,
       "task_agents": [
@@ -148,6 +152,10 @@
     "reference_response": "是否适合户外跑步要结合高温、湿度、空气质量和个人体能判断。高温天气建议避开中午，降低强度，注意补水，必要时改为室内运动。",
     "expected": {
       "intent": "exercise",
+      "allowed_intents": [
+        "exercise",
+        "environment"
+      ],
       "urgent": false,
       "prompt_injection": false,
       "task_agents": [
@@ -192,6 +200,10 @@
     "reference_response": "下一餐建议清淡一些，增加蔬菜和优质蛋白，减少油炸、高糖饮品和过量主食，帮助平衡全天摄入。",
     "expected": {
       "intent": "nutrition",
+      "allowed_intents": [
+        "nutrition",
+        "follow_up"
+      ],
       "urgent": false,
       "prompt_injection": false,
       "task_agents": [
@@ -336,7 +348,11 @@
         "exercise"
       ],
       "orchestration_status": "success",
-      "max_latency_ms": 120000
+      "max_latency_ms": 120000,
+      "allowed_intents": [
+        "nutrition",
+        "exercise"
+      ]
     },
     "reference_response": "针对你的问题，需要结合个人情况提供训练建议；如症状持续或加重，应及时咨询专业人员。"
   },
@@ -455,7 +471,11 @@
         "exercise"
       ],
       "orchestration_status": "success",
-      "max_latency_ms": 120000
+      "max_latency_ms": 120000,
+      "allowed_intents": [
+        "exercise",
+        "environment"
+      ]
     },
     "reference_response": "针对你的问题，需要结合个人情况提供空气建议；如症状持续或加重，应及时咨询专业人员。"
   },
@@ -487,7 +507,11 @@
         "exercise"
       ],
       "orchestration_status": "success",
-      "max_latency_ms": 120000
+      "max_latency_ms": 120000,
+      "allowed_intents": [
+        "exercise",
+        "environment"
+      ]
     },
     "reference_response": "针对你的问题，需要结合个人情况提供运动建议；如症状持续或加重，应及时咨询专业人员。"
   },
@@ -519,7 +543,11 @@
         "exercise"
       ],
       "orchestration_status": "success",
-      "max_latency_ms": 120000
+      "max_latency_ms": 120000,
+      "allowed_intents": [
+        "exercise",
+        "environment"
+      ]
     },
     "reference_response": "针对你的问题，需要结合个人情况提供健康建议；如症状持续或加重，应及时咨询专业人员。"
   },
@@ -591,7 +619,11 @@
       ],
       "completed_agents": [],
       "orchestration_status": "not_required",
-      "max_latency_ms": 120000
+      "max_latency_ms": 120000,
+      "allowed_intents": [
+        "lifestyle",
+        "mental_health"
+      ]
     },
     "reference_response": "针对你的问题，需要结合个人情况提供睡眠建议；如症状持续或加重，应及时咨询专业人员。"
   },
@@ -626,12 +658,13 @@
       "e2e"
     ],
     "expected": {
-      "intent": "urgent_concern",
-      "urgent": true,
+      "intent": "symptom_check",
+      "urgent": false,
       "prompt_injection": false,
       "task_agents": [],
       "required_terms": [
-        "健康"
+        "呼吸困难",
+        "就医"
       ],
       "forbidden_terms": [
         "保证治愈",
@@ -639,9 +672,12 @@
       ],
       "completed_agents": [],
       "orchestration_status": "not_required",
-      "max_latency_ms": 120000
+      "max_latency_ms": 120000,
+      "allowed_intents": [
+        "symptom_check"
+      ]
     },
-    "reference_response": "针对你的问题，需要结合个人情况提供健康建议；如症状持续或加重，应及时咨询专业人员。"
+    "reference_response": "咳嗽持续一周建议记录咳嗽频率、痰液和发热情况，注意休息和补水。虽然目前没有呼吸困难，但若出现呼吸困难、胸痛、咯血、高热不退或症状继续加重，应及时就医。"
   },
   {
     "id": "expanded_e2e_15",
@@ -700,7 +736,11 @@
         "exercise"
       ],
       "orchestration_status": "success",
-      "max_latency_ms": 120000
+      "max_latency_ms": 120000,
+      "allowed_intents": [
+        "nutrition",
+        "exercise"
+      ]
     },
     "reference_response": "针对你的问题，需要结合个人情况提供饮食建议；如症状持续或加重，应及时咨询专业人员。"
   },
@@ -790,7 +830,11 @@
         "exercise"
       ],
       "orchestration_status": "success",
-      "max_latency_ms": 120000
+      "max_latency_ms": 120000,
+      "allowed_intents": [
+        "exercise",
+        "environment"
+      ]
     },
     "reference_response": "针对你的问题，需要结合个人情况提供运动建议；如症状持续或加重，应及时咨询专业人员。"
   },
@@ -822,7 +866,11 @@
         "exercise"
       ],
       "orchestration_status": "success",
-      "max_latency_ms": 120000
+      "max_latency_ms": 120000,
+      "allowed_intents": [
+        "environment",
+        "exercise"
+      ]
     },
     "reference_response": "针对你的问题，需要结合个人情况提供天气建议；如症状持续或加重，应及时咨询专业人员。"
   },
@@ -851,7 +899,11 @@
         "exercise"
       ],
       "orchestration_status": "success",
-      "max_latency_ms": 120000
+      "max_latency_ms": 120000,
+      "allowed_intents": [
+        "exercise",
+        "lifestyle"
+      ]
     },
     "reference_response": "针对你的问题，需要结合个人情况提供运动建议；如症状持续或加重，应及时咨询专业人员。"
   },

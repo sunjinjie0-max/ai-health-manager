@@ -24,6 +24,25 @@ def exact_match_metric(name: str, actual: Any, expected: Any) -> MetricResult:
     )
 
 
+def intent_match_metric(
+    actual: str,
+    expected: str,
+    allowed_intents: list[str] | None = None,
+) -> MetricResult:
+    accepted = set(allowed_intents or [expected])
+    passed = actual in accepted
+    return MetricResult(
+        name="intent",
+        score=1.0 if passed else 0.0,
+        passed=passed,
+        details={
+            "actual": actual,
+            "expected": expected,
+            "allowed": sorted(accepted),
+        },
+    )
+
+
 def agent_set_metric(actual: list[str], expected: list[str]) -> MetricResult:
     return named_set_metric("task_agents", actual, expected)
 

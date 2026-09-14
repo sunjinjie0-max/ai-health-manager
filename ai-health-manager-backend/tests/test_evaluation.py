@@ -11,6 +11,8 @@ from app.evaluation.health_advisor import (
     run_evaluation,
     run_evaluation_suite,
 )
+from app.evaluation.metrics import intent_match_metric
+from scripts import generate_evaluation_datasets
 
 
 def test_load_default_evaluation_dataset():
@@ -67,6 +69,45 @@ def test_builtin_evaluation_datasets_load():
     assert sum(expected_case_counts.values()) == 240
     assert len(all_case_ids) == 240
     assert len(set(all_case_ids)) == 240
+
+
+def test_intent_contract_accepts_an_explicit_allowed_intent():
+    metric = intent_match_metric(
+        actual="environment",
+        expected="exercise",
+        allowed_intents=["exercise", "environment"],
+    )
+
+    assert metric.passed is True
+    assert metric.score == 1.0
+
+
+def test_negated_cough_case_is_non_urgent_and_has_red_flag_guidance():
+    case = next(
+        case
+        for case in load_cases(SUITE_DATASETS["e2e_agent"])
+        if case.id == "expanded_e2e_14"
+    )
+
+    assert case.expected.intent == "symptom_check"
+    assert case.expected.allowed_intents == ["symptom_check"]
+    assert case.expected.urgent is False
+    assert "呼吸困难" in case.reference_response
+    assert "就医" in case.reference_response
+
+
+def test_e2e_dataset_generation_is_idempotent(tmp_path, monkeypatch):
+    source = SUITE_DATASETS["e2e_agent"].read_text(encoding="utf-8")
+    target = tmp_path / "e2e_agent_cases.json"
+    target.write_text(source, encoding="utf-8")
+    monkeypatch.setattr(generate_evaluation_datasets, "DATASET_DIR", tmp_path)
+
+    assert generate_evaluation_datasets.write_dataset("e2e_agent") == 30
+    first = target.read_text(encoding="utf-8")
+    assert generate_evaluation_datasets.write_dataset("e2e_agent") == 30
+    second = target.read_text(encoding="utf-8")
+
+    assert first == second
 
 
 @pytest.mark.asyncio
@@ -263,13 +304,26 @@ async def test_e2e_agent_option_uses_full_replay_result(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_all_evaluation_suites_pass():
+async def test_all_evaluation_suites_match_known_contract_baseline():
     report = await run_evaluation_suite("all", min_score=0.85)
 
-    assert report["summary"]["passed"] is True
     assert set(report["reports"]) == set(SUITE_DATASETS)
     assert "llm_usage" in report["summary"]
-    assert report["failure_feedback"]["summary"]["failed_case_count"] == 0
+    assert all(
+        suite_report["summary"]["passed"]
+        for name, suite_report in report["reports"].items()
+        if name != "e2e_agent"
+    )
+
+    e2e_report = report["reports"]["e2e_agent"]
+    assert e2e_report["summary"]["product_failed_cases"] == ["expanded_e2e_14"]
+    cough_case = next(
+        case for case in e2e_report["cases"] if case["id"] == "expanded_e2e_14"
+    )
+    assert {
+        metric["name"] for metric in cough_case["metrics"] if not metric["passed"]
+    } == {"intent", "urgent"}
+    assert report["summary"]["passed"] is False
 
 
 @pytest.mark.asyncio

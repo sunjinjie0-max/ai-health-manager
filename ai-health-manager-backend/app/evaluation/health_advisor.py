@@ -22,6 +22,7 @@ from app.evaluation.metrics import (
     agent_set_metric,
     aggregate_results,
     exact_match_metric,
+    intent_match_metric,
     metric_to_dict,
     named_set_metric,
     optional_exact_match_metric,
@@ -172,7 +173,11 @@ async def evaluate_case(
 
     should_score_rag = bool(retrieved_docs or live_rag or e2e_agent)
     metrics = [
-        exact_match_metric("intent", predicted_intent, case.expected.intent),
+        intent_match_metric(
+            predicted_intent,
+            case.expected.intent,
+            case.expected.allowed_intents,
+        ),
         exact_match_metric("urgent", is_urgent, case.expected.urgent),
         exact_match_metric(
             "prompt_injection",

@@ -11,6 +11,7 @@ from typing import Any
 @dataclass(frozen=True)
 class ExpectedOutcome:
     intent: str = "general_health"
+    allowed_intents: list[str] = field(default_factory=list)
     urgent: bool = False
     prompt_injection: bool = False
     task_agents: list[str] = field(default_factory=list)
@@ -45,6 +46,7 @@ class EvaluationCase:
 def _expected_from_dict(payload: dict[str, Any]) -> ExpectedOutcome:
     return ExpectedOutcome(
         intent=payload.get("intent", "general_health"),
+        allowed_intents=list(payload.get("allowed_intents", [])),
         urgent=bool(payload.get("urgent", False)),
         prompt_injection=bool(payload.get("prompt_injection", False)),
         task_agents=list(payload.get("task_agents", [])),
