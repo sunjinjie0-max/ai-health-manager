@@ -211,19 +211,23 @@ AgentOrchestrator 是多 Agent 系统的流程控制中心。它主要负责五�
 ```text
 HealthAdvisor Agent 是默认对话入口，它的 LangGraph 流程大致是：
 
-load_context -> check_safety -> classify_intent -> memory_route -> retrieve_memory -> plan_tasks -> dispatch_agents 或 rag_retrieve -> generate_response -> post_process。
+check_safety -> urgent_reply -> END，或者：
 
-load_context 会加载用户画像、短期会话历史和健康档案摘要。
+check_safety -> load_context -> classify_intent -> memory_route -> retrieve_memory -> plan_tasks -> dispatch_agents -> aggregate_results -> rag_retrieve -> generate_response -> post_process -> END。
+
+其中 `dispatch_agents` 和 `rag_retrieve` 都是条件节点：没有专业子任务时会跳过 Agent 调度；memory policy 判断不需要外部知识时会跳过 RAG，直接进入最终回复生成。
+
+check_safety 是入口节点，会先用确定性规则识别胸痛、呼吸困难、中风、自杀意念等紧急情况，规则未命中时再用有时间预算的 LLM 做补充判断。如果确认紧急，会直接进入固定模板的 urgent_reply 并结束主流程，不等待数据库、RAG、专业 Agent 或普通后处理。
+
+load_context 只在非紧急路径执行，负责加载用户画像、短期会话历史和健康档案摘要。
 
 memory_route 会先判断当前问题是短期追问、长期事实回忆，还是通用知识问答。
 
-retrieve_memory 只在需要时检索长期记忆，长期记忆本身存储在 ES 向量索引里，按 user_id 过滤后做向量召回。
-
-check_safety 会识别胸痛、呼吸困难、中风、自杀意念等紧急情况。如果命中高风险，会直接进入 urgent_reply，不再走普通问答。
+retrieve_memory 根据 memory policy 获取本轮需要的短期或长期记忆；长期记忆按 user_id 隔离检索。
 
 classify_intent 会识别 nutrition、environment、exercise、general_health、multi_domain 等意图。
 
-plan_tasks 和 dispatch_agents 负责专业 Agent 调度。
+plan_tasks 生成带依赖关系和时间预算的专业任务；dispatch_agents 按 DAG 分批执行，aggregate_results 汇总专业 Agent 的结构化结果。
 
 generate_response 会结合用户画像、RAG 知识、子 Agent 结果和安全规则生成最终回复。
 
