@@ -7,7 +7,7 @@ import logging
 from typing import Any
 
 from app.config import settings
-from app.llm.deepseek import deepseek_client
+from app.llm.deepseek import LLMResponseError, deepseek_client, mark_llm_degraded
 from app.rag.retriever import rag_retriever
 
 logger = logging.getLogger(__name__)
@@ -137,10 +137,19 @@ exercises={state.get("exercises", [])}
         )
     except Exception as exc:
         logger.warning("[llm_refine_plan] LLM refine failed: %s", exc)
+        mark_llm_degraded(state, stage="exercise.refine_plan", error=exc)
         state["llm_refine_status"] = "failed"
         return state
 
     if not isinstance(result, dict) or "raw_response" in result:
+        mark_llm_degraded(
+            state,
+            stage="exercise.refine_plan",
+            error=LLMResponseError(
+                "invalid_schema",
+                "Exercise refinement did not return a JSON object",
+            ),
+        )
         state["llm_refine_status"] = "invalid_response"
         return state
 

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from app.llm.deepseek import DeepSeekClient
+from app.llm.deepseek import DeepSeekClient, LLMResponseError
 from app.llm.usage import track_llm_usage
 
 
@@ -41,11 +41,75 @@ async def test_json_chat_with_code_fence(client):
 
 @pytest.mark.asyncio
 async def test_json_chat_invalid_json(client):
+    first_response = MagicMock()
+    first_response.content = '{"intent":'
+    second_response = MagicMock()
+    second_response.content = '{"intent":'
+    client.llm.ainvoke = AsyncMock(side_effect=[first_response, second_response])
+
+    with pytest.raises(LLMResponseError, match="invalid JSON") as exc_info:
+        await client.json_chat("分类意图", "你好")
+
+    assert exc_info.value.code == "invalid_json"
+    assert client.llm.ainvoke.await_count == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("content", ["", "   ", "```json\n```"])
+async def test_chat_rejects_empty_content_after_one_retry(client, content):
     mock_response = MagicMock()
-    mock_response.content = "这不是JSON"
+    mock_response.content = content
     client.llm.ainvoke = AsyncMock(return_value=mock_response)
-    result = await client.json_chat("分类意图", "你好")
-    assert "raw_response" in result
+
+    with pytest.raises(LLMResponseError) as exc_info:
+        await client.chat("健康顾问", "你好")
+
+    assert exc_info.value.code == "empty_response"
+    assert client.llm.ainvoke.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_chat_can_disable_inner_retry(client):
+    mock_response = MagicMock()
+    mock_response.content = ""
+    client.llm.ainvoke = AsyncMock(return_value=mock_response)
+
+    with pytest.raises(LLMResponseError):
+        await client.chat("健康顾问", "你好", max_attempts=1)
+
+    assert client.llm.ainvoke.await_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("finish_reason", "error_code"),
+    [("length", "truncated_response"), ("content_filter", "content_filtered")],
+)
+async def test_chat_rejects_unusable_finish_reason(client, finish_reason, error_code):
+    mock_response = MagicMock()
+    mock_response.content = "这是一段看起来存在内容但不可使用的回答。"
+    mock_response.response_metadata = {"finish_reason": finish_reason}
+    client.llm.ainvoke = AsyncMock(return_value=mock_response)
+
+    with pytest.raises(LLMResponseError) as exc_info:
+        await client.chat("健康顾问", "你好")
+
+    assert exc_info.value.code == error_code
+    assert client.llm.ainvoke.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_chat_retries_network_timeout_once_then_succeeds(client):
+    valid_response = MagicMock()
+    valid_response.content = "这是重试后返回的有效健康建议。"
+    client.llm.ainvoke = AsyncMock(
+        side_effect=[TimeoutError("provider timeout"), valid_response]
+    )
+
+    result = await client.chat("健康顾问", "你好")
+
+    assert result == "这是重试后返回的有效健康建议。"
+    assert client.llm.ainvoke.await_count == 2
 
 
 @pytest.mark.asyncio

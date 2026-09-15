@@ -15,7 +15,7 @@ from app.agents.health_advisor.context_assembler import (
 )
 from app.agents.health_advisor.state import HealthAdvisorState
 from app.core.prompt_security import bounded_user_text, prompt_security_guard
-from app.llm.deepseek import deepseek_client
+from app.llm.deepseek import deepseek_client, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,43 @@ EXERCISE_ACTIVITY_WORDS = (
     "徒步",
     "健身",
 )
+
+
+def _local_degraded_response(state: HealthAdvisorState) -> str:
+    """Return specialist output or an intent-specific safe local response."""
+    specialist_responses: list[str] = []
+    for payload in (state.get("aggregated_agent_context") or {}).values():
+        data = payload.get("data") or {}
+        response = str(data.get("response") or payload.get("summary") or "").strip()
+        if response and response not in specialist_responses:
+            specialist_responses.append(response)
+    if specialist_responses:
+        return "\n\n".join(specialist_responses)
+
+    intent = state.get("intent", "general_health")
+    fallbacks = {
+        "exercise": (
+            "当前智能生成服务暂时不可用。运动安排可以先从低强度热身、适量主体训练和放松拉伸开始，"
+            "根据体能逐步增加强度；运动中出现胸痛、明显呼吸困难、眩晕或其他不适时应立即停止并及时就医。"
+        ),
+        "nutrition": (
+            "当前智能生成服务暂时不可用。饮食上可以先保持食物多样化，每餐搭配主食、蔬菜和优质蛋白，"
+            "并减少高油、高盐和高糖食物；如果补充具体食物和份量，之后可以继续做更有针对性的分析。"
+        ),
+        "symptom_check": (
+            "当前智能生成服务暂时不可用，暂时无法完成个性化症状分析。请记录症状开始时间、变化和伴随表现；"
+            "如果症状持续加重，或出现胸痛、明显呼吸困难、意识异常等危险信号，请立即拨打120或前往急诊。"
+        ),
+        "mental_health": (
+            "当前智能生成服务暂时不可用。可以先联系信任的亲友并尽量避免独处；如果存在伤害自己或他人的想法，"
+            "请立即联系当地急救服务或前往最近的急诊。"
+        ),
+        "greeting": "你好，当前智能生成服务暂时不可用，请稍后再试。",
+    }
+    return fallbacks.get(
+        intent,
+        "当前智能生成服务暂时不可用，因此无法完成个性化回答。你可以稍后重试；如果身体不适持续或加重，请及时咨询医疗专业人员。",
+    )
 
 
 def _memory_metadata(message: dict) -> dict:
@@ -724,6 +761,7 @@ async def generate_response(state: HealthAdvisorState) -> HealthAdvisorState:
     """
     user_message = state.get("user_message", "")
     intent = state.get("intent", "")
+    citations: list[dict] = []
 
     logger.info(f"Generating response for intent: {intent}")
 
@@ -757,6 +795,8 @@ async def generate_response(state: HealthAdvisorState) -> HealthAdvisorState:
         response = await deepseek_client.chat(
             system_prompt=HEALTH_ADVISOR_PROMPT + prompt_security_guard(),
             user_message=prompt,
+            stage="health_advisor.generate_response",
+            min_content_chars=20,
         )
 
         logger.info(f"Generated response: {response[:100]}...")
@@ -768,8 +808,13 @@ async def generate_response(state: HealthAdvisorState) -> HealthAdvisorState:
 
     except Exception as e:
         logger.error(f"Response generation failed: {e}")
-        # Provide fallback response
-        state["response"] = "抱歉，我在处理您的问题时遇到了技术问题。请稍后再试，或者尝试用不同的方式描述您的问题。"
+        mark_llm_degraded(
+            state,
+            stage="health_advisor.generate_response",
+            error=e,
+        )
+        state["response"] = _local_degraded_response(state)
+        state["citations"] = citations
         state["next_node"] = "post_process"
 
     return state

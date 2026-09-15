@@ -48,10 +48,13 @@ class SendMessageResponse(BaseModel):
     session_title: str
     message_id: str
     trace_id: str
-    citations: list[dict] = []
-    suggested_questions: list[str] = []
+    citations: list[dict] = Field(default_factory=list)
+    suggested_questions: list[str] = Field(default_factory=list)
     safety_flag: dict | None = None
     intent: str | None = None
+    degraded: bool = False
+    degradation_reason: str | None = None
+    degradation_events: list[dict] = Field(default_factory=list)
 
 
 class SuggestedQuestionFeedbackRequest(BaseModel):
@@ -357,6 +360,9 @@ async def send_message(
             suggested_questions=result.get("suggested_questions", []),
             safety_flag=result.get("safety_flag"),
             intent=result.get("intent"),
+            degraded=result.get("degraded", False),
+            degradation_reason=result.get("degradation_reason"),
+            degradation_events=result.get("degradation_events", []),
         )
     except HTTPException:
         raise
@@ -424,6 +430,9 @@ async def stream_response(
             "session_title": session_title,
             "message_id": message_id,
             "trace_id": trace_id,
+            "degraded": result.get("degraded", False),
+            "degradation_reason": result.get("degradation_reason"),
+            "degradation_events": result.get("degradation_events", []),
         }
         yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
 

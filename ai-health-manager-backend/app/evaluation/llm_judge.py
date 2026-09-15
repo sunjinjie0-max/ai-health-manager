@@ -182,6 +182,7 @@ async def judge_answer(
                 JUDGE_SYSTEM_PROMPT,
                 prompt,
                 stage="evaluation.llm_judge",
+                max_attempts=1,
             )
             validated = _validate_judge_result(raw)
             return {

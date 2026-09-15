@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 from app.config import settings
-from app.llm.deepseek import deepseek_client
+from app.llm.deepseek import deepseek_client, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +56,17 @@ async def llm_generate_advice(state: dict) -> dict:
         )
     except Exception as exc:
         logger.warning("[llm_generate_advice] LLM advice failed: %s", exc)
+        mark_llm_degraded(state, stage="environment.generate_advice", error=exc)
         state["llm_advice_status"] = "failed"
         return state
 
     advice = str(advice or "").strip()
     if not advice:
+        mark_llm_degraded(
+            state,
+            stage="environment.generate_advice",
+            error=ValueError("empty environment advice"),
+        )
         state["llm_advice_status"] = "empty"
         return state
 

@@ -2,7 +2,7 @@
 
 import logging
 
-from app.llm.deepseek import deepseek_client
+from app.llm.deepseek import deepseek_client, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ async def general_nutrition_advice(state: dict) -> dict:
             "[general_nutrition_advice] LLM failed, using fallback: %s",
             exc,
         )
+        mark_llm_degraded(state, stage="nutrition.general_advice", error=exc)
         response = _fallback_response(query_intent)
 
     return {

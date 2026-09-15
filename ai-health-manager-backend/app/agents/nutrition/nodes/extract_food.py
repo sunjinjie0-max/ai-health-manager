@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List
 
-from app.llm.deepseek import DeepSeekClient
+from app.llm.deepseek import DeepSeekClient, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +102,7 @@ Return ONLY valid JSON without any markdown formatting or additional text."""
 
     except Exception as e:
         logger.error(f"[extract_food] Error: {e}")
+        mark_llm_degraded(state, stage="nutrition.extract_food", error=e)
         # Fallback
         food_desc = state.get('food_description', '')
         return {

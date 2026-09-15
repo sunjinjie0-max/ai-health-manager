@@ -17,6 +17,8 @@ def _compact_result(agent_name: str, result: dict[str, Any]) -> dict[str, Any]:
             "health_score": result.get("health_score"),
             "recommendations": result.get("recommendations", []),
             "response": result.get("response", ""),
+            "degraded": result.get("degraded", False),
+            "degradation_events": result.get("degradation_events", []),
         }
     if agent_name == "environment":
         return {
@@ -26,6 +28,8 @@ def _compact_result(agent_name: str, result: dict[str, Any]) -> dict[str, Any]:
             "health_risk": result.get("health_risk"),
             "recommendations": result.get("recommendations", []),
             "response": result.get("response", ""),
+            "degraded": result.get("degraded", False),
+            "degradation_events": result.get("degradation_events", []),
         }
     if agent_name == "exercise":
         return {
@@ -33,6 +37,8 @@ def _compact_result(agent_name: str, result: dict[str, Any]) -> dict[str, Any]:
             "exercises": result.get("exercises", []),
             "safety_notes": result.get("safety_notes", []),
             "response": result.get("response", ""),
+            "degraded": result.get("degraded", False),
+            "degradation_events": result.get("degradation_events", []),
         }
     return result
 
@@ -65,6 +71,14 @@ async def aggregate_results(state: HealthAdvisorState) -> HealthAdvisorState:
             "data": _compact_result(agent_name, result),
         }
         warnings.extend(response.get("warnings", []))
+
+        if result.get("degraded"):
+            state["degraded"] = True
+            degradation_events = list(state.get("degradation_events") or [])
+            degradation_events.extend(result.get("degradation_events") or [])
+            state["degradation_events"] = degradation_events
+            if degradation_events:
+                state["degradation_reason"] = degradation_events[-1].get("code")
 
     state["aggregated_agent_context"] = aggregated
     state["agent_warnings"] = warnings

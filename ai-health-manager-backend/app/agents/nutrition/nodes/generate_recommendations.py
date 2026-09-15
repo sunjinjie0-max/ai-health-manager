@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List
 
-from app.llm.deepseek import DeepSeekClient
+from app.llm.deepseek import DeepSeekClient, LLMResponseError, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
 
@@ -111,10 +111,23 @@ Requirements:
 
         except Exception as e:
             logger.error(f"[generate_recommendations] LLM error: {e}")
+            mark_llm_degraded(
+                state,
+                stage="nutrition.analyze_and_recommend",
+                error=e,
+            )
             response = {}
 
         if not isinstance(response, dict) or "raw_response" in response:
             logger.error(f"[generate_recommendations] LLM returned invalid JSON")
+            mark_llm_degraded(
+                state,
+                stage="nutrition.analyze_and_recommend",
+                error=LLMResponseError(
+                    "invalid_schema",
+                    "Nutrition recommendations did not return a JSON object",
+                ),
+            )
             response = {}
 
         nutrition_analysis = response.get("nutrition_analysis", "").strip()
@@ -133,7 +146,23 @@ Requirements:
             state['nutrition_analysis'] = nutrition_analysis
             state["nutrition_analysis_status"] = "generated"
 
-        state['recommendations'] = (recommendations or _generate_fallback_recommendations(state))
+        if not nutrition_analysis or not recommendations:
+            if not state.get("degraded"):
+                mark_llm_degraded(
+                    state,
+                    stage="nutrition.analyze_and_recommend",
+                    error=LLMResponseError(
+                        "invalid_schema",
+                        "Nutrition response omitted required fields",
+                    ),
+                )
+            state["nutrition_recommendation_status"] = "fallback"
+        else:
+            state["nutrition_recommendation_status"] = "generated"
+
+        state['recommendations'] = (
+            recommendations or _generate_fallback_recommendations(state)
+        )
 
         # Generate alternative food suggestions
         state['alternative_foods'] = _generate_alternatives(state)

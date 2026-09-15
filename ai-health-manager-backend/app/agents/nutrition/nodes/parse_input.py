@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict
 
-from app.llm.deepseek import DeepSeekClient
+from app.llm.deepseek import DeepSeekClient, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +95,7 @@ Return ONLY valid JSON without any markdown formatting or additional text."""
 
     except Exception as e:
         logger.error(f"[parse_input] Error: {e}")
+        mark_llm_degraded(state, stage="nutrition.parse_input", error=e)
         # Fallback
         return {
             **state,

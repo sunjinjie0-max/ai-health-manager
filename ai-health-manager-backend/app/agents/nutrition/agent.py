@@ -187,6 +187,9 @@ class NutritionAgent(BaseAgent):
                 "recommendations": recommendations,
                 "alternative_foods": result.get("alternative_foods", []),
                 "extracted_foods": result.get("extracted_foods", []),
+                "degraded": result.get("degraded", False),
+                "degradation_reason": result.get("degradation_reason"),
+                "degradation_events": result.get("degradation_events", []),
                 "tool_trace": result.get("tool_trace", []),
                 "citations": [
                     {
@@ -204,6 +207,11 @@ class NutritionAgent(BaseAgent):
                 "response": f"抱歉，在分析您的饮食时遇到了技术问题。请稍后再试，或者尝试用不同的方式描述您的饮食。\n\n错误信息：{str(e)}",
                 "health_score": 0,
                 "recommendations": [],
+                "degraded": True,
+                "degradation_reason": "workflow_error",
+                "degradation_events": [
+                    {"stage": "nutrition.workflow", "code": "workflow_error"}
+                ],
                 "tool_trace": [],
                 "citations": [],
             }

@@ -146,6 +146,9 @@ class ExerciseAgent(BaseAgent):
                 "llm_refine_rationale": result.get("llm_refine_rationale", ""),
                 "safety_validation_status": result.get("safety_validation_status", ""),
                 "rag_guidelines": rag_guidelines,
+                "degraded": result.get("degraded", False),
+                "degradation_reason": result.get("degradation_reason"),
+                "degradation_events": result.get("degradation_events", []),
                 "tool_trace": result.get("tool_trace", []),
                 "citations": [
                     {
@@ -170,6 +173,11 @@ class ExerciseAgent(BaseAgent):
                 "workout_plan": {},
                 "exercises": [],
                 "safety_notes": [],
+                "degraded": True,
+                "degradation_reason": "workflow_error",
+                "degradation_events": [
+                    {"stage": "exercise.workflow", "code": "workflow_error"}
+                ],
                 "tool_trace": [],
                 "citations": [],
             }

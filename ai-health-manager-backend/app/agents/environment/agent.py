@@ -165,6 +165,9 @@ class EnvironmentAgent(BaseAgent):
                 "recommendations": recommendations,
                 "llm_advice": llm_advice,
                 "llm_advice_status": result.get("llm_advice_status", "not_run"),
+                "degraded": result.get("degraded", False),
+                "degradation_reason": result.get("degradation_reason"),
+                "degradation_events": result.get("degradation_events", []),
                 "tool_trace": result.get("tool_trace", []),
                 "citations": [
                     {
@@ -185,6 +188,11 @@ class EnvironmentAgent(BaseAgent):
                 "weather": {},
                 "health_risk": {},
                 "recommendations": [],
+                "degraded": True,
+                "degradation_reason": "workflow_error",
+                "degradation_events": [
+                    {"stage": "environment.workflow", "code": "workflow_error"}
+                ],
                 "tool_trace": [],
                 "citations": [],
             }
