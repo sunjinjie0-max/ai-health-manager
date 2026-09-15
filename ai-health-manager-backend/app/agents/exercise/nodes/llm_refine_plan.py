@@ -134,6 +134,8 @@ exercises={state.get("exercises", [])}
                 "不得突破安全约束,不得编造不存在的医学结论。"
             ),
             user_message=prompt,
+            deadline_monotonic=state.get("deadline_monotonic"),
+            timeout_seconds=settings.specialist_llm_timeout_seconds,
         )
     except Exception as exc:
         logger.warning("[llm_refine_plan] LLM refine failed: %s", exc)

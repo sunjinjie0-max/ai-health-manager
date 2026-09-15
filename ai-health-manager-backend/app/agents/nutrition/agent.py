@@ -240,13 +240,14 @@ class NutritionAgent(BaseAgent):
             or request.payload.get("message")
             or ""
         )
-        result = await self.process(
-            NutritionState(
-                user_message=message,
-                user_id=request.user_id,
-                session_id=request.session_id,
-            )
+        state = NutritionState(
+            user_message=message,
+            user_id=request.user_id,
+            session_id=request.session_id,
         )
+        state["deadline_monotonic"] = request.deadline_monotonic
+        state["trace_id"] = request.trace_id
+        result = await self.process(state)
         status = "failed" if not result.get("response") and result.get("health_score", 0) == 0 else "success"
         return AgentResponse(
             trace_id=request.trace_id,

@@ -2,6 +2,7 @@
 
 import logging
 
+from app.config import settings
 from app.llm.deepseek import deepseek_client, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,8 @@ async def general_nutrition_advice(state: dict) -> dict:
             system_prompt=system_prompt,
             user_message=user_message,
             stage="nutrition.general_advice",
+            deadline_monotonic=state.get("deadline_monotonic"),
+            timeout_seconds=settings.specialist_llm_timeout_seconds,
         )
         response = str(response or "").strip()
 

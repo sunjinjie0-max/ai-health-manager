@@ -8,6 +8,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.config import settings
+from app.core.deadline import child_deadline, remaining_seconds, require_remaining
 from app.tools.registry import tool_registry
 
 logger = logging.getLogger(__name__)
@@ -30,6 +32,7 @@ class ToolExecutionContext:
     user_id: str = ""
     session_id: str = ""
     timeout_seconds: float | None = None
+    deadline_monotonic: float | None = None
     retry: int = 0
     required: bool = False
     allow_fallback: bool = True
@@ -135,6 +138,17 @@ class ToolExecutor:
         if tool is None:
             return self._failure(tool_name, context, started_at, "failed", "Tool is not registered")
 
+        timeout = context.timeout_seconds or settings.tool_timeout_seconds
+        operation_deadline = child_deadline(context.deadline_monotonic, timeout)
+        if (remaining_seconds(operation_deadline) or 0.0) <= 0:
+            return self._failure(
+                tool_name,
+                context,
+                started_at,
+                "timeout",
+                "Tool deadline was exhausted before execution",
+            )
+
         attempts = max(context.retry, 0) + 1
         last_error: Exception | None = None
         for attempt in range(1, attempts + 1):
@@ -199,13 +213,15 @@ class ToolExecutor:
         if tool is None:
             return self._failure(tool_name, context, started_at, "failed", "Tool is not registered")
 
+        timeout = context.timeout_seconds or settings.tool_timeout_seconds
+        operation_deadline = child_deadline(context.deadline_monotonic, timeout)
         attempts = max(context.retry, 0) + 1
-        timeout = context.timeout_seconds
         last_error: Exception | None = None
         for attempt in range(1, attempts + 1):
             try:
                 coro = tool.invoke(**kwargs)
-                data = await asyncio.wait_for(coro, timeout=timeout) if timeout else await coro
+                attempt_timeout = require_remaining(operation_deadline, timeout)
+                data = await asyncio.wait_for(coro, timeout=attempt_timeout)
                 source = "tool"
                 if isinstance(data, dict):
                     source = str(data.get("data_source") or data.get("source") or source)
@@ -224,7 +240,7 @@ class ToolExecutor:
                     context,
                     started_at,
                     "timeout",
-                    f"Timeout after {timeout}s",
+                    f"Tool budget exhausted after {timeout}s",
                     retry_count=attempt - 1,
                 )
             except Exception as exc:

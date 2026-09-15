@@ -14,6 +14,7 @@ from app.agents.health_advisor.context_assembler import (
     budget_profile_for,
 )
 from app.agents.health_advisor.state import HealthAdvisorState
+from app.config import settings
 from app.core.prompt_security import bounded_user_text, prompt_security_guard
 from app.llm.deepseek import deepseek_client, mark_llm_degraded
 
@@ -797,6 +798,8 @@ async def generate_response(state: HealthAdvisorState) -> HealthAdvisorState:
             user_message=prompt,
             stage="health_advisor.generate_response",
             min_content_chars=20,
+            deadline_monotonic=state.get("deadline_monotonic"),
+            timeout_seconds=settings.final_generation_timeout_seconds,
         )
 
         logger.info(f"Generated response: {response[:100]}...")

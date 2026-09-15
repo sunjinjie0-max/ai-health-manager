@@ -7,6 +7,13 @@ from typing import Any
 
 from app.agents.protocol import AgentRequest, AgentResponse, AgentTask
 from app.agents.registry import agent_registry
+from app.config import settings
+from app.core.deadline import (
+    child_deadline,
+    create_deadline,
+    remaining_seconds,
+    require_remaining,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +34,7 @@ class AgentOrchestrator:
         session_id: str = "",
         user_message: str = "",
         trace_id: str | None = None,
+        deadline_monotonic: float | None = None,
     ) -> dict[str, Any]:
         """Dispatch tasks to agents by dependency batches.
 
@@ -34,19 +42,24 @@ class AgentOrchestrator:
         adding full protocol responses under `responses`.
         """
         trace_id = trace_id or str(uuid.uuid4())
+        deadline_monotonic = deadline_monotonic or create_deadline(
+            settings.agent_request_timeout_seconds
+        )
         normalized_tasks = [self._normalize_task(task) for task in tasks]
         logger.info("Dispatching %d agent tasks (trace=%s)", len(normalized_tasks), trace_id)
 
         completed: dict[str, dict] = dict(prior_results or {})
         responses: dict[str, dict] = {}
         failed: dict[str, dict] = {}
+        optional_timeouts: dict[str, dict] = {}
+        resolved_dependencies = set(completed)
         pending = {task.task_id: task for task in normalized_tasks}
 
         while pending:
             ready = [
                 task
                 for task in pending.values()
-                if all(dep in completed for dep in task.depends_on)
+                if all(dep in resolved_dependencies for dep in task.depends_on)
             ]
 
             if not ready:
@@ -77,6 +90,7 @@ class AgentOrchestrator:
                         user_message=user_message,
                         user_profile=user_profile,
                         prior_results=completed,
+                        request_deadline=deadline_monotonic,
                     )
                     for task in ready
                 ]
@@ -89,7 +103,15 @@ class AgentOrchestrator:
                     completed[task.task_id] = response_dict
                     # Also expose by agent name for backwards compatibility.
                     completed[task.agent_name] = response.result
+                    resolved_dependencies.add(task.task_id)
                     logger.info("Task %s completed with status=%s", task.task_id, response.status)
+                elif response.status == "timeout" and not task.required:
+                    optional_timeouts[task.task_id] = response_dict
+                    resolved_dependencies.add(task.task_id)
+                    logger.warning(
+                        "Optional task %s timed out; dependent tasks will continue with degradation",
+                        task.task_id,
+                    )
                 else:
                     failed[task.task_id] = response_dict
                     logger.warning("Task %s failed with status=%s", task.task_id, response.status)
@@ -98,8 +120,10 @@ class AgentOrchestrator:
         return {
             "completed": completed,
             "failed": failed,
+            "optional_timeouts": optional_timeouts,
             "responses": responses,
             "success": len(failed) == 0,
+            "degraded": bool(optional_timeouts),
             "trace_id": trace_id,
         }
 
@@ -117,6 +141,7 @@ class AgentOrchestrator:
             depends_on=task.get("depends_on", []),
             required=task.get("required", False),
             timeout_seconds=task.get("timeout_seconds"),
+            attempt_timeout_seconds=task.get("attempt_timeout_seconds"),
             retry=task.get("retry", self.max_retries),
         )
 
@@ -129,6 +154,7 @@ class AgentOrchestrator:
         user_message: str,
         user_profile: dict,
         prior_results: dict,
+        request_deadline: float,
     ) -> AgentResponse:
         agent = agent_registry.get(task.agent_name)
         if not agent:
@@ -141,31 +167,73 @@ class AgentOrchestrator:
             )
 
         attempts = max(task.retry, 0) + 1
-        timeout = task.timeout_seconds or self.timeout_seconds
-        request = AgentRequest(
-            trace_id=trace_id,
-            user_id=user_id,
-            session_id=session_id,
-            agent_name=task.agent_name,
-            task_type=task.task_type,
-            user_message=user_message,
-            payload=task.payload,
-            user_profile=user_profile,
-            prior_results=prior_results,
-            deadline_ms=timeout * 1000,
-        )
-
+        task_budget = task.timeout_seconds or self.timeout_seconds
+        attempt_budget = task.attempt_timeout_seconds or task_budget
+        task_deadline = child_deadline(request_deadline, task_budget)
+        initial_remaining = remaining_seconds(task_deadline) or 0.0
+        if initial_remaining <= 0:
+            return AgentResponse(
+                trace_id=trace_id,
+                agent_name=task.agent_name,
+                task_type=task.task_type,
+                status="timeout",
+                error={
+                    "code": "deadline_exceeded",
+                    "message": "Request deadline was exhausted before task start",
+                    "retryable": False,
+                },
+                metadata={"required": task.required},
+            )
         last_error: Exception | None = None
         for attempt in range(1, attempts + 1):
             try:
-                return await asyncio.wait_for(agent.handle(request), timeout=timeout)
-            except asyncio.TimeoutError:
+                timeout = require_remaining(task_deadline, attempt_budget)
+                attempt_deadline = child_deadline(task_deadline, timeout)
+                request = AgentRequest(
+                    trace_id=trace_id,
+                    user_id=user_id,
+                    session_id=session_id,
+                    agent_name=task.agent_name,
+                    task_type=task.task_type,
+                    user_message=user_message,
+                    payload=task.payload,
+                    user_profile=user_profile,
+                    prior_results=prior_results,
+                    deadline_monotonic=attempt_deadline,
+                    deadline_ms=round(timeout * 1000),
+                )
+                response = await asyncio.wait_for(agent.handle(request), timeout=timeout)
+                response.metadata = {
+                    **response.metadata,
+                    "attempt": attempt,
+                    "max_attempts": attempts,
+                }
+                return response
+            except asyncio.TimeoutError as exc:
+                last_error = exc
+                if attempt < attempts and (remaining_seconds(task_deadline) or 0) > 0:
+                    logger.warning(
+                        "Task %s attempt %d/%d timed out; retrying within remaining budget",
+                        task.task_id,
+                        attempt,
+                        attempts,
+                    )
+                    continue
                 return AgentResponse(
                     trace_id=trace_id,
                     agent_name=task.agent_name,
                     task_type=task.task_type,
                     status="timeout",
-                    error={"message": f"Timeout after {timeout}s"},
+                    error={
+                        "code": "deadline_exceeded",
+                        "message": f"Task budget exhausted after {task_budget}s",
+                        "retryable": False,
+                    },
+                    metadata={
+                        "required": task.required,
+                        "attempt": attempt,
+                        "max_attempts": attempts,
+                    },
                 )
             except Exception as exc:
                 last_error = exc

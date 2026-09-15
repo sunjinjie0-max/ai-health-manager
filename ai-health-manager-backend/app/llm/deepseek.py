@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import re
@@ -9,6 +10,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.config import settings
+from app.core.deadline import child_deadline, require_remaining
 from app.llm.usage import build_usage_record, record_llm_usage
 
 logger = logging.getLogger(__name__)
@@ -153,12 +155,18 @@ class DeepSeekClient:
         parser: Callable[[str], T],
         min_content_chars: int,
         max_attempts: int,
+        deadline_monotonic: float | None,
+        timeout_seconds: float | None,
     ) -> T:
         """Invoke the provider with one bounded retry and strict validation."""
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_message),
         ]
+        call_deadline = child_deadline(
+            deadline_monotonic,
+            timeout_seconds or settings.deepseek_request_timeout,
+        )
         bounded_attempts = min(max(1, max_attempts), 2)
         last_error: Exception | None = None
         for attempt in range(1, bounded_attempts + 1):
@@ -175,7 +183,14 @@ class DeepSeekClient:
                 len(user_message),
             )
             try:
-                response = await self.llm.ainvoke(messages)
+                attempt_timeout = require_remaining(
+                    call_deadline,
+                    settings.llm_attempt_timeout_seconds,
+                )
+                response = await asyncio.wait_for(
+                    self.llm.ainvoke(messages),
+                    timeout=attempt_timeout,
+                )
                 elapsed_ms = (time.perf_counter() - started_at) * 1000
                 content = _response_text(response)
                 usage_record = build_usage_record(
@@ -233,6 +248,8 @@ class DeepSeekClient:
         stage: str = "deepseek.chat",
         min_content_chars: int = 2,
         max_attempts: int = 2,
+        deadline_monotonic: float | None = None,
+        timeout_seconds: float | None = None,
     ) -> str:
         """Send a chat message and return validated text."""
         return await self._request(
@@ -242,6 +259,8 @@ class DeepSeekClient:
             parser=lambda text: text,
             min_content_chars=min_content_chars,
             max_attempts=max_attempts,
+            deadline_monotonic=deadline_monotonic,
+            timeout_seconds=timeout_seconds,
         )
 
     async def json_chat(
@@ -251,6 +270,8 @@ class DeepSeekClient:
         *,
         stage: str = "deepseek.json_chat",
         max_attempts: int = 2,
+        deadline_monotonic: float | None = None,
+        timeout_seconds: float | None = None,
     ) -> Any:
         """Send a chat message and return validated, parsed JSON."""
         return await self._request(
@@ -260,6 +281,8 @@ class DeepSeekClient:
             parser=_parse_json_response,
             min_content_chars=2,
             max_attempts=max_attempts,
+            deadline_monotonic=deadline_monotonic,
+            timeout_seconds=timeout_seconds,
         )
 
 

@@ -227,6 +227,8 @@ class ExerciseAgent(BaseAgent):
         state.user_profile = request.user_profile
         state["prior_results"] = request.prior_results
         state.prior_results = request.prior_results
+        state["deadline_monotonic"] = request.deadline_monotonic
+        state["trace_id"] = request.trace_id
 
         result = await self.process(state)
         status = "success" if result.get("response") else "failed"

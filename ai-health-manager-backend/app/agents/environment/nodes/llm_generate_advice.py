@@ -53,6 +53,8 @@ async def llm_generate_advice(state: dict) -> dict:
                 "改写成贴近用户问题的自然语言建议。"
             ),
             user_message=prompt,
+            deadline_monotonic=state.get("deadline_monotonic"),
+            timeout_seconds=settings.specialist_llm_timeout_seconds,
         )
     except Exception as exc:
         logger.warning("[llm_generate_advice] LLM advice failed: %s", exc)

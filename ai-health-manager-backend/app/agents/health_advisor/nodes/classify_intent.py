@@ -6,7 +6,8 @@ import logging
 
 from app.agents.health_advisor.prompts import INTENT_CLASSIFICATION_PROMPT
 from app.agents.health_advisor.state import HealthAdvisorState
-from app.llm.deepseek import deepseek_client
+from app.config import settings
+from app.llm.deepseek import deepseek_client, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,8 @@ async def classify_intent(state: HealthAdvisorState) -> HealthAdvisorState:
         result = deepseek_client.json_chat(
             system_prompt="你是一个专门分析健康咨询意图的AI助手。",
             user_message=prompt,
+            deadline_monotonic=state.get("deadline_monotonic"),
+            timeout_seconds=settings.classification_timeout_seconds,
         )
         if inspect.isawaitable(result):
             result = await result
@@ -65,6 +68,7 @@ async def classify_intent(state: HealthAdvisorState) -> HealthAdvisorState:
 
     except Exception as e:
         logger.error(f"Intent classification failed: {e}")
+        mark_llm_degraded(state, stage="health_advisor.classify_intent", error=e)
         # Fallback to general health
         state["intent"] = "general_health"
         state["intent_confidence"] = 0.0

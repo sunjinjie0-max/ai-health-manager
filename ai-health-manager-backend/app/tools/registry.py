@@ -1,5 +1,6 @@
 """Tool Registry for managing agent tools."""
 
+import asyncio
 from typing import Callable, Optional
 
 
@@ -26,7 +27,7 @@ class Tool:
         if inspect.iscoroutinefunction(self.func):
             return await self.func(**kwargs)
         else:
-            return self.func(**kwargs)
+            return await asyncio.to_thread(self.func, **kwargs)
 
     def invoke_sync(self, **kwargs):
         """Invoke a synchronous tool from a synchronous workflow node."""

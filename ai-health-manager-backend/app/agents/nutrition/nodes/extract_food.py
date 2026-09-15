@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Dict, List
 
+from app.config import settings
 from app.llm.deepseek import DeepSeekClient, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,8 @@ Return ONLY valid JSON without any markdown formatting or additional text."""
             system_prompt=system_prompt,
             user_message=user_message,
             stage="nutrition.extract_food",
+            deadline_monotonic=state.get("deadline_monotonic"),
+            timeout_seconds=settings.specialist_llm_timeout_seconds,
         )
 
         # Parse response - response is already a dict from json_chat

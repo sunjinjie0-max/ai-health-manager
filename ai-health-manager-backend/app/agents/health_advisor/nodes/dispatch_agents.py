@@ -4,6 +4,8 @@ import logging
 
 from app.agents.health_advisor.state import HealthAdvisorState
 from app.agents.orchestrator import orchestrator
+from app.config import settings
+from app.core.deadline import deadline_before_reserve
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +22,17 @@ async def dispatch_agents(state: HealthAdvisorState) -> HealthAdvisorState:
     profile = context.get("profile", {})
 
     try:
+        dispatch_deadline = deadline_before_reserve(
+            state.get("deadline_monotonic"),
+            settings.final_generation_timeout_seconds,
+        )
         dispatch_result = await orchestrator.dispatch(
             tasks=tasks,
             user_profile=profile,
             user_id=state.get("user_id", "anonymous"),
             session_id=state.get("session_id", ""),
             user_message=state.get("user_message", ""),
+            deadline_monotonic=dispatch_deadline,
         )
         state["sub_agent_results"] = dispatch_result.get("responses", {})
         state["agent_trace"] = {
@@ -34,6 +41,15 @@ async def dispatch_agents(state: HealthAdvisorState) -> HealthAdvisorState:
             "failed": list(dispatch_result.get("failed", {}).keys()),
         }
         state["orchestration_status"] = "success" if dispatch_result.get("success") else "partial"
+        if dispatch_result.get("degraded"):
+            state["orchestration_status"] = "partial"
+            state["degraded"] = True
+            state.setdefault("degradation_events", []).append(
+                {
+                    "stage": "dispatch_agents",
+                    "code": "optional_task_timeout",
+                }
+            )
         logger.info(
             "Sub-agent dispatch finished with status=%s trace=%s",
             state["orchestration_status"],

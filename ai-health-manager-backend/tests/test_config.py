@@ -16,6 +16,12 @@ def test_settings_loads_defaults(monkeypatch):
     assert s.max_request_body_bytes == 5 * 1024 * 1024
     assert s.max_upload_body_bytes == 50 * 1024 * 1024
     assert s.max_knowledge_pdf_bytes == 30 * 1024 * 1024
+    assert s.agent_request_timeout_seconds == 60
+    assert s.nutrition_agent_timeout_seconds == 25
+    assert s.environment_agent_timeout_seconds == 15
+    assert s.exercise_agent_timeout_seconds == 25
+    assert s.final_generation_timeout_seconds == 20
+    assert s.chat_persistence_timeout_seconds == 3
 
 
 def test_settings_override():

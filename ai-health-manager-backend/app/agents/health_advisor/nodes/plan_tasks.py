@@ -5,6 +5,7 @@ import re
 
 from app.agents.health_advisor.state import HealthAdvisorState
 from app.agents.protocol import AgentTask
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -131,18 +132,22 @@ async def plan_tasks(state: HealthAdvisorState) -> HealthAdvisorState:
     location = _extract_location(user_message, profile)
 
     if has_nutrition:
+        attempt_timeout = float(settings.nutrition_agent_timeout_seconds)
         tasks.append(
             AgentTask(
                 task_id="nutrition_analysis",
                 agent_name="nutrition",
                 task_type="meal_analysis",
                 payload={"description": user_message},
-                timeout_seconds=60,
+                required=True,
+                timeout_seconds=attempt_timeout * 2,
+                attempt_timeout_seconds=attempt_timeout,
                 retry=1,
             )
         )
 
     if has_environment:
+        attempt_timeout = float(settings.environment_agent_timeout_seconds)
         tasks.append(
             AgentTask(
                 task_id="environment_analysis",
@@ -152,12 +157,15 @@ async def plan_tasks(state: HealthAdvisorState) -> HealthAdvisorState:
                     "location": location or user_message,
                     "query_type": "all",
                 },
-                timeout_seconds=20,
+                required=True,
+                timeout_seconds=attempt_timeout * 2,
+                attempt_timeout_seconds=attempt_timeout,
                 retry=1,
             )
         )
 
     if has_exercise:
+        attempt_timeout = float(settings.exercise_agent_timeout_seconds)
         depends_on = ["environment_analysis"] if has_environment else []
         tasks.append(
             AgentTask(
@@ -171,7 +179,9 @@ async def plan_tasks(state: HealthAdvisorState) -> HealthAdvisorState:
                     "location": "outdoor" if has_environment or "户外" in user_message else "home",
                 },
                 depends_on=depends_on,
-                timeout_seconds=25,
+                required=True,
+                timeout_seconds=attempt_timeout * 2,
+                attempt_timeout_seconds=attempt_timeout,
                 retry=1,
             )
         )

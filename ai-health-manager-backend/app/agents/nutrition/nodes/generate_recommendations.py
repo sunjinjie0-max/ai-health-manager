@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Dict, List
 
+from app.config import settings
 from app.llm.deepseek import DeepSeekClient, LLMResponseError, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
@@ -107,6 +108,8 @@ Requirements:
                     system_prompt=system_prompt,
                     user_message=user_message,
                     stage="nutrition.analyze_and_recommend",
+                    deadline_monotonic=state.get("deadline_monotonic"),
+                    timeout_seconds=settings.specialist_llm_timeout_seconds,
             )
 
         except Exception as e:

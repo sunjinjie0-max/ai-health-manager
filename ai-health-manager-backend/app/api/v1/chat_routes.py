@@ -1,5 +1,6 @@
 """Authenticated chat API routes."""
 
+import asyncio
 import json
 import logging
 import re
@@ -30,6 +31,12 @@ from app.agents.health_advisor.nodes import (
 )
 from app.agents.health_advisor.nodes.post_process import _schedule_background_task
 from app.api.deps import get_current_user, get_db
+from app.config import settings
+from app.core.deadline import (
+    create_deadline,
+    deadline_before_reserve,
+    require_remaining,
+)
 from app.core.observability import get_trace_id
 from app.core.time import utc_now_naive
 from app.models.chat import ChatMessage, ChatSession
@@ -38,6 +45,7 @@ from app.models.user import User
 from app.services.suggested_questions import suggested_question_service
 
 logger = logging.getLogger(__name__)
+_CHAT_PERSISTENCE_TASKS: set[asyncio.Task] = set()
 
 router = APIRouter()
 
@@ -152,6 +160,63 @@ async def _process_state(state: HealthAdvisorState) -> HealthAdvisorState:
     """Run the HealthAdvisor graph steps explicitly for route-level testability."""
     trace_id = state.get("trace_id") or get_trace_id() or str(uuid.uuid4())
     state["trace_id"] = trace_id
+    state.setdefault(
+        "deadline_monotonic",
+        create_deadline(settings.agent_request_timeout_seconds),
+    )
+
+    stage_budgets = {
+        "check_safety": settings.safety_llm_timeout_seconds,
+        "urgent_reply": settings.routing_timeout_seconds,
+        "load_context": settings.context_timeout_seconds,
+        "classify_intent": settings.classification_timeout_seconds,
+        "memory_route": settings.routing_timeout_seconds,
+        "retrieve_memory": settings.memory_timeout_seconds,
+        "plan_tasks": settings.routing_timeout_seconds,
+        "dispatch_agents": settings.agent_request_timeout_seconds,
+        "aggregate_results": settings.routing_timeout_seconds,
+        "rag_retrieve": settings.rag_timeout_seconds,
+        "generate_response": settings.final_generation_timeout_seconds,
+        "post_process": settings.post_process_timeout_seconds,
+    }
+
+    def apply_timeout_fallback(stage_name: str) -> None:
+        state["degraded"] = True
+        state["degradation_reason"] = "deadline_exceeded"
+        state.setdefault("degradation_events", []).append(
+            {"stage": stage_name, "code": "deadline_exceeded"}
+        )
+        state.setdefault("agent_warnings", []).append(
+            f"{stage_name} 阶段超时，已使用可用的本地降级结果。"
+        )
+
+        if stage_name == "check_safety":
+            state["safety_flag"] = {
+                "is_urgent": False,
+                "risk_level": "unknown",
+                "warning_message": None,
+                "recommendations": [],
+            }
+        elif stage_name == "load_context":
+            state.setdefault("context", {})
+        elif stage_name == "classify_intent":
+            state["intent"] = state.get("intent") or "general_health"
+            state["intent_confidence"] = 0.0
+        elif stage_name == "retrieve_memory":
+            state["retrieved_short_term_memories"] = []
+            state["retrieved_long_term_memories"] = []
+        elif stage_name == "dispatch_agents":
+            state["sub_agent_results"] = {}
+            state["orchestration_status"] = "timeout"
+        elif stage_name == "rag_retrieve":
+            state["retrieved_docs"] = []
+        elif stage_name == "generate_response":
+            state["response"] = (
+                "本次健康咨询处理已达到时间上限，无法完成全部个性化分析。"
+                "请稍后重试；如果身体不适持续或加重，请及时咨询医疗专业人员。"
+            )
+        elif stage_name == "post_process":
+            state.setdefault("suggested_questions", [])
 
     async def run_stage(stage_name: str, func, *, needs_db: bool = False) -> HealthAdvisorState:
         started_at = time.perf_counter()
@@ -164,11 +229,32 @@ async def _process_state(state: HealthAdvisorState) -> HealthAdvisorState:
             state.get("user_message", "")[:80],
         )
         try:
-            if needs_db:
-                async with async_session() as db:
-                    result = await func(state, db)
-            else:
-                result = await func(state)
+            timeout = require_remaining(
+                state.get("deadline_monotonic"),
+                stage_budgets[stage_name],
+            )
+
+            async def invoke_stage() -> HealthAdvisorState:
+                if needs_db:
+                    async with async_session() as db:
+                        return await func(state, db)
+                return await func(state)
+
+            result = await asyncio.wait_for(invoke_stage(), timeout=timeout)
+        except asyncio.TimeoutError:
+            elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
+            trace = dict(state.get("agent_trace") or {})
+            trace[stage_name] = {"status": "timeout", "elapsed_ms": elapsed_ms}
+            state["agent_trace"] = trace
+            apply_timeout_fallback(stage_name)
+            logger.warning(
+                "[chat_pipeline] trace=%s stage=%s timeout session=%s elapsed=%.2fs",
+                trace_id,
+                stage_name,
+                state.get("session_id", ""),
+                time.perf_counter() - started_at,
+            )
+            return state
         except Exception:
             elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
             trace = dict(state.get("agent_trace") or {})
@@ -285,6 +371,81 @@ async def _persist_chat_turn_background(
         )
 
 
+async def _persist_chat_turn_and_title(
+    session_id: str,
+    user_message: str,
+    result: dict,
+    assistant_message_id: str,
+) -> str:
+    """Persist a normal turn in an independent session and return its title."""
+    async with async_session() as db:
+        await _save_chat_turn(
+            db,
+            session_id,
+            user_message,
+            HealthAdvisorState(**result),
+            assistant_message_id=assistant_message_id,
+        )
+        return await _get_session_title(db, session_id, user_message)
+
+
+async def _persist_normal_chat_turn(
+    session_id: str,
+    user_message: str,
+    result: HealthAdvisorState,
+    request_deadline: float,
+) -> tuple[str, str, bool]:
+    """Wait briefly for persistence, then let it finish without delaying reply."""
+    message_id = str(uuid.uuid4())
+    snapshot = dict(result)
+    trace_id = str(snapshot.get("trace_id") or "")
+
+    def log_completion(completed: asyncio.Task) -> None:
+        _CHAT_PERSISTENCE_TASKS.discard(completed)
+        if completed.cancelled():
+            logger.warning("Chat persistence cancelled trace=%s", trace_id)
+            return
+        error = completed.exception()
+        if error is not None:
+            logger.error(
+                "Chat persistence failed trace=%s: %s",
+                trace_id,
+                error,
+                exc_info=(type(error), error, error.__traceback__),
+            )
+
+    task = asyncio.create_task(
+        _persist_chat_turn_and_title(
+            session_id,
+            user_message,
+            snapshot,
+            message_id,
+        ),
+        name=f"health-advisor:chat-persistence:{trace_id or 'untraced'}",
+    )
+    _CHAT_PERSISTENCE_TASKS.add(task)
+    task.add_done_callback(log_completion)
+
+    try:
+        timeout = require_remaining(
+            request_deadline,
+            settings.chat_persistence_timeout_seconds,
+        )
+        session_title = await asyncio.wait_for(asyncio.shield(task), timeout=timeout)
+        return message_id, session_title, False
+    except asyncio.TimeoutError:
+        if task.done():
+            # A persistence operation that raised its own TimeoutError is a
+            # real storage failure, not merely exhaustion of the response wait.
+            session_title = task.result()
+            return message_id, session_title, False
+        logger.warning(
+            "Chat persistence exceeded response budget and continues in background trace=%s",
+            trace_id,
+        )
+        return message_id, _compact_session_title(user_message), True
+
+
 def _schedule_urgent_chat_turn(
     session_id: str,
     user_message: str,
@@ -328,17 +489,29 @@ async def send_message(
     current_user: User = Depends(get_current_user),
 ):
     """Send a message and get an authenticated, persisted response."""
+    request_deadline = create_deadline(settings.agent_request_timeout_seconds)
+    processing_deadline = deadline_before_reserve(
+        request_deadline,
+        settings.chat_persistence_timeout_seconds,
+    )
     try:
         message, session_id = await _extract_message_payload(request, message, session_id)
         if not message:
             raise HTTPException(status_code=422, detail="message is required")
 
-        session = await _get_or_create_session(db, current_user.id, session_id)
+        session = await asyncio.wait_for(
+            _get_or_create_session(db, current_user.id, session_id),
+            timeout=require_remaining(
+                processing_deadline,
+                settings.context_timeout_seconds,
+            ),
+        )
         state = HealthAdvisorState(
             user_message=message,
             user_id=current_user.id,
             session_id=session.id,
             trace_id=getattr(request.state, "trace_id", get_trace_id()),
+            deadline_monotonic=processing_deadline,
         )
         result = await _process_state(state)
         if (result.get("safety_flag") or {}).get("is_urgent"):
@@ -346,9 +519,17 @@ async def send_message(
             result["message_persistence_scheduled"] = scheduled
             session_title = _compact_session_title(message)
         else:
-            assistant_msg = await _save_chat_turn(db, session.id, message, result)
-            message_id = assistant_msg.id
-            session_title = await _get_session_title(db, session.id, message)
+            message_id, session_title, scheduled = await _persist_normal_chat_turn(
+                session.id,
+                message,
+                result,
+                request_deadline,
+            )
+            if scheduled:
+                result["degraded"] = True
+                result.setdefault("degradation_events", []).append(
+                    {"stage": "chat_persistence", "code": "background_pending"}
+                )
 
         return SendMessageResponse(
             reply=result.get("response", ""),
@@ -366,6 +547,9 @@ async def send_message(
         )
     except HTTPException:
         raise
+    except asyncio.TimeoutError as exc:
+        logger.warning("Chat request deadline exceeded before processing trace=%s", get_trace_id())
+        raise HTTPException(status_code=504, detail="Chat request deadline exceeded") from exc
     except Exception as exc:
         logger.exception("Error in send_message")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -378,15 +562,27 @@ async def stream_response(
     trace_id: str,
 ) -> AsyncGenerator[str, None]:
     """Stream response using SSE and persist the completed chat turn."""
+    request_deadline = create_deadline(settings.agent_request_timeout_seconds)
+    processing_deadline = deadline_before_reserve(
+        request_deadline,
+        settings.chat_persistence_timeout_seconds,
+    )
     try:
         async with async_session() as db:
-            session = await _get_or_create_session(db, user_id, session_id)
+            session = await asyncio.wait_for(
+                _get_or_create_session(db, user_id, session_id),
+                timeout=require_remaining(
+                    processing_deadline,
+                    settings.context_timeout_seconds,
+                ),
+            )
 
         state = HealthAdvisorState(
             user_message=message,
             user_id=user_id,
             session_id=session.id,
             trace_id=trace_id,
+            deadline_monotonic=processing_deadline,
         )
 
         yield f"data: {json.dumps({'status': 'processing', 'stage': 'started', 'session_id': session.id, 'trace_id': trace_id})}\n\n"
@@ -419,10 +615,17 @@ async def stream_response(
             result["message_persistence_scheduled"] = scheduled
             session_title = _compact_session_title(message)
         else:
-            async with async_session() as db:
-                assistant_msg = await _save_chat_turn(db, session.id, message, result)
-                session_title = await _get_session_title(db, session.id, message)
-            message_id = assistant_msg.id
+            message_id, session_title, scheduled = await _persist_normal_chat_turn(
+                session.id,
+                message,
+                result,
+                request_deadline,
+            )
+            if scheduled:
+                result["degraded"] = True
+                result.setdefault("degradation_events", []).append(
+                    {"stage": "chat_persistence", "code": "background_pending"}
+                )
 
         done_payload = {
             "done": True,

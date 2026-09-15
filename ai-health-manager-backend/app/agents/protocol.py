@@ -22,6 +22,8 @@ class AgentRequest(BaseModel):
     chat_history: list[dict[str, Any]] = Field(default_factory=list)
     relevant_memories: list[dict[str, Any]] = Field(default_factory=list)
     prior_results: dict[str, Any] = Field(default_factory=dict)
+    deadline_monotonic: float | None = None
+    # Deprecated duration field retained for compatibility with older callers.
     deadline_ms: int = 30000
     locale: str = "zh-CN"
 
@@ -52,5 +54,9 @@ class AgentTask(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
     required: bool = False
-    timeout_seconds: int | None = None
+    # Total budget shared by all attempts for this task.
+    timeout_seconds: float | None = None
+    # Per-attempt cap. A retry gets a fresh cap, but can never outlive the
+    # task/request deadline.
+    attempt_timeout_seconds: float | None = None
     retry: int = 0

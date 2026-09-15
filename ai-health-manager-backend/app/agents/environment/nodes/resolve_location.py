@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 import app.tools.environment  # noqa: F401 - registers environment tools
+from app.config import settings
 from app.tools.executor import ToolExecutionContext, append_tool_trace, tool_executor
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,8 @@ def resolve_location_from_text(query: str, state: dict[str, Any] | None = None) 
             trace_id=str((state or {}).get("trace_id", "")),
             user_id=str((state or {}).get("user_id", "")),
             session_id=str((state or {}).get("session_id", "")),
+            timeout_seconds=settings.tool_timeout_seconds,
+            deadline_monotonic=(state or {}).get("deadline_monotonic"),
             required=True,
         ),
         query=query,

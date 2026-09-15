@@ -4,8 +4,9 @@ import logging
 
 from app.agents.health_advisor.prompts import SAFETY_CHECK_PROMPT
 from app.agents.health_advisor.state import HealthAdvisorState
+from app.config import settings
 from app.core.prompt_security import assess_prompt_injection
-from app.llm.deepseek import deepseek_client
+from app.llm.deepseek import deepseek_client, mark_llm_degraded
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +166,8 @@ async def check_safety(state: HealthAdvisorState) -> HealthAdvisorState:
         result = await deepseek_client.json_chat(
             system_prompt="你是一个专门分析健康咨询安全性的AI助手。",
             user_message=prompt,
+            deadline_monotonic=state.get("deadline_monotonic"),
+            timeout_seconds=settings.safety_llm_timeout_seconds,
         )
 
         is_urgent = result.get("is_urgent", False)
@@ -191,6 +194,7 @@ async def check_safety(state: HealthAdvisorState) -> HealthAdvisorState:
 
     except Exception as e:
         logger.error(f"Safety check failed: {e}")
+        mark_llm_degraded(state, stage="health_advisor.check_safety", error=e)
         # Fail safe - assume not urgent
         state["safety_flag"] = {
             "is_urgent": False,

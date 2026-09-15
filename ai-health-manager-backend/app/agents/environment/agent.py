@@ -227,6 +227,8 @@ class EnvironmentAgent(BaseAgent):
             session_id=request.session_id,
         )
         state.location_query = location or ""
+        state["deadline_monotonic"] = request.deadline_monotonic
+        state["trace_id"] = request.trace_id
         result = await self.process(state)
         status = "success" if result.get("response") else "failed"
         warnings = []

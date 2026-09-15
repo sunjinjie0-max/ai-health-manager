@@ -8,6 +8,7 @@ import math
 from typing import Any
 
 from app.evaluation.metrics import MetricResult, score_threshold_metric
+from app.config import settings
 from app.llm.deepseek import deepseek_client
 
 
@@ -183,6 +184,7 @@ async def judge_answer(
                 prompt,
                 stage="evaluation.llm_judge",
                 max_attempts=1,
+                timeout_seconds=settings.judge_timeout_seconds,
             )
             validated = _validate_judge_result(raw)
             return {

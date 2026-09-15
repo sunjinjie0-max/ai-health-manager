@@ -1,6 +1,8 @@
-import pytest
-from unittest.mock import AsyncMock, patch
+import asyncio
 from importlib import import_module
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from app.agents.base import BaseAgent, AgentState
 from app.agents.environment.nodes.llm_generate_advice import llm_generate_advice
@@ -193,6 +195,76 @@ async def test_orchestrator_skips_unsatisfied_dependencies(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_orchestrator_optional_timeout_does_not_block_dependency(monkeypatch):
+    registry = AgentRegistry()
+
+    class TimeoutAgent(ProtocolDummyAgent):
+        async def handle(self, request):
+            raise asyncio.TimeoutError
+
+    registry.register("optional", TimeoutAgent())
+    registry.register("dependent", ProtocolDummyAgent())
+
+    import app.agents.orchestrator as orchestrator_module
+
+    monkeypatch.setattr(orchestrator_module, "agent_registry", registry)
+    result = await AgentOrchestrator(timeout_seconds=2).dispatch(
+        tasks=[
+            {
+                "task_id": "optional_task",
+                "agent_name": "optional",
+                "required": False,
+            },
+            {
+                "task_id": "dependent_task",
+                "agent_name": "dependent",
+                "depends_on": ["optional_task"],
+            },
+        ],
+        user_profile={},
+    )
+
+    assert result["degraded"] is True
+    assert result["responses"]["optional_task"]["status"] == "timeout"
+    assert result["responses"]["dependent_task"]["status"] == "success"
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_required_timeout_blocks_dependency(monkeypatch):
+    registry = AgentRegistry()
+
+    class TimeoutAgent(ProtocolDummyAgent):
+        async def handle(self, request):
+            raise asyncio.TimeoutError
+
+    registry.register("required", TimeoutAgent())
+    registry.register("dependent", ProtocolDummyAgent())
+
+    import app.agents.orchestrator as orchestrator_module
+
+    monkeypatch.setattr(orchestrator_module, "agent_registry", registry)
+    result = await AgentOrchestrator(timeout_seconds=2).dispatch(
+        tasks=[
+            {
+                "task_id": "required_task",
+                "agent_name": "required",
+                "required": True,
+            },
+            {
+                "task_id": "dependent_task",
+                "agent_name": "dependent",
+                "depends_on": ["required_task"],
+            },
+        ],
+        user_profile={},
+    )
+
+    assert result["success"] is False
+    assert result["responses"]["required_task"]["status"] == "timeout"
+    assert result["responses"]["dependent_task"]["status"] == "skipped"
+
+
+@pytest.mark.asyncio
 async def test_nutrition_agent_handles_empty_food_extraction(monkeypatch):
     """Test the nutrition flow degrades gracefully when no foods are extracted."""
     agent = NutritionAgent()
@@ -236,9 +308,12 @@ async def test_exercise_agent_handles_none_workflow_result():
     assert result["exercises"] == []
 
 
-def test_environment_air_quality_initializes_missing_state_fields():
+@pytest.mark.asyncio
+async def test_environment_air_quality_initializes_missing_state_fields():
     """Environment nodes should recover when LangGraph passes a sparse dict."""
-    state = fetch_air_quality({"user_message": "结合杭州5月19日的天气，给出我运动的计划"})
+    state = await fetch_air_quality(
+        {"user_message": "结合杭州5月19日的天气，给出我运动的计划"}
+    )
 
     assert state["location"]["city"] == "杭州市"
     assert "api_errors" in state
@@ -365,9 +440,10 @@ async def test_exercise_llm_refine_plan_is_optional_and_uses_rag(monkeypatch):
             }
         ]
 
-    async def fake_json_chat(system_prompt, user_message):
+    async def fake_json_chat(system_prompt, user_message, **kwargs):
         assert "baseline计划" in user_message
         assert "RAG运动指南片段" in user_message
+        assert kwargs["timeout_seconds"] == settings.specialist_llm_timeout_seconds
         return {
             "workout_plan": {"plan_type": "cardio", "total_duration": 30},
             "exercises": [
@@ -412,8 +488,9 @@ async def test_environment_llm_generate_advice_adds_personalized_text(monkeypatc
     monkeypatch.setattr(settings, "environment_llm_advice_enabled", True)
     monkeypatch.setattr(settings, "deepseek_api_key", "test-key")
 
-    async def fake_chat(system_prompt, user_message):
+    async def fake_chat(system_prompt, user_message, **kwargs):
         assert "只能解释和组织已有数据" in user_message
+        assert kwargs["timeout_seconds"] == settings.specialist_llm_timeout_seconds
         return "今天更适合低强度户外活动，跑步建议缩短时长并注意补水。"
 
     advice_module = import_module("app.agents.environment.nodes.llm_generate_advice")

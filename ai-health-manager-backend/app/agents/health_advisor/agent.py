@@ -1,5 +1,6 @@
 """Health Advisor Agent implementation."""
 
+import asyncio
 import logging
 from typing import Any
 
@@ -22,6 +23,8 @@ from app.agents.health_advisor.nodes import (
     urgent_reply,
 )
 from app.agents.health_advisor.state import HealthAdvisorState
+from app.config import settings
+from app.core.deadline import create_deadline, require_remaining
 
 logger = logging.getLogger(__name__)
 
@@ -167,12 +170,24 @@ class HealthAdvisorAgent(BaseAgent):
         logger.info(f"Processing request: {state.user_message[:100]}...")
 
         try:
+            deadline = state.get("deadline_monotonic") or create_deadline(
+                settings.agent_request_timeout_seconds
+            )
+            state["deadline_monotonic"] = deadline
+            timeout = require_remaining(
+                deadline,
+                settings.agent_request_timeout_seconds,
+            )
+
             # Get or compile graph
             graph = self.graph
 
             # Execute graph - convert state to dict for LangGraph
             initial_state_dict = dict(state)
-            final_state_dict = await graph.ainvoke(initial_state_dict)
+            final_state_dict = await asyncio.wait_for(
+                graph.ainvoke(initial_state_dict),
+                timeout=timeout,
+            )
 
             # Convert result back to HealthAdvisorState
             final_state = HealthAdvisorState(**final_state_dict)
@@ -180,6 +195,22 @@ class HealthAdvisorAgent(BaseAgent):
             logger.info("Request processing complete")
 
             return final_state
+        except asyncio.TimeoutError:
+            logger.warning("Health Advisor request deadline exhausted")
+            state["response"] = (
+                "本次健康咨询处理已达到时间上限，无法完成全部个性化分析。"
+                "请稍后重试；如果身体不适持续或加重，请及时咨询医疗专业人员。"
+            )
+            state["status"] = "timeout"
+            state["degraded"] = True
+            state["degradation_reason"] = "deadline_exceeded"
+            state.setdefault("degradation_events", []).append(
+                {
+                    "stage": "health_advisor.request",
+                    "code": "deadline_exceeded",
+                }
+            )
+            return state
         except Exception as e:
             logger.error(f"Error in agent process: {e}", exc_info=True)
             # Return error response

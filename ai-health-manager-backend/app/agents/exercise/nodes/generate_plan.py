@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 import app.tools.exercise  # noqa: F401 - registers exercise tools
+from app.config import settings
 from app.tools.exercise import EXERCISE_DB
 from app.tools.executor import ToolExecutionContext, append_tool_trace, tool_executor
 
@@ -20,6 +21,8 @@ def generate_plan(state: dict[str, Any]) -> dict[str, Any]:
             trace_id=str(state.get("trace_id", "")),
             user_id=str(state.get("user_id", "")),
             session_id=str(state.get("session_id", "")),
+            timeout_seconds=settings.tool_timeout_seconds,
+            deadline_monotonic=state.get("deadline_monotonic"),
             required=True,
         ),
         fitness_level=state.get("fitness_level", "beginner"),
