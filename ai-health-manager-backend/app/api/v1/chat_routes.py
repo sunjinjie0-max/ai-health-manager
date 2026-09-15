@@ -28,6 +28,7 @@ from app.agents.health_advisor.nodes import (
     retrieve_memory,
     urgent_reply,
 )
+from app.agents.health_advisor.nodes.post_process import _schedule_background_task
 from app.api.deps import get_current_user, get_db
 from app.core.observability import get_trace_id
 from app.core.time import utc_now_naive
@@ -193,13 +194,12 @@ async def _process_state(state: HealthAdvisorState) -> HealthAdvisorState:
         )
         return result
 
-    state = await run_stage("load_context", load_context, needs_db=True)
     state = await run_stage("check_safety", check_safety)
     safety_flag = state.get("safety_flag") or {}
     if safety_flag.get("is_urgent"):
-        state = await run_stage("urgent_reply", urgent_reply)
-        return await run_stage("post_process", post_process, needs_db=True)
+        return await run_stage("urgent_reply", urgent_reply)
 
+    state = await run_stage("load_context", load_context, needs_db=True)
     state = await run_stage("classify_intent", classify_intent)
     state = await run_stage("memory_route", memory_route)
     state = await run_stage("retrieve_memory", retrieve_memory, needs_db=True)
@@ -242,9 +242,12 @@ async def _save_chat_turn(
     session_id: str,
     user_message: str,
     result: HealthAdvisorState,
+    *,
+    assistant_message_id: str | None = None,
 ) -> ChatMessage:
     user_msg = ChatMessage(session_id=session_id, role="user", content=user_message)
     assistant_msg = ChatMessage(
+        id=assistant_message_id or str(uuid.uuid4()),
         session_id=session_id,
         role="assistant",
         content=result.get("response", ""),
@@ -261,6 +264,44 @@ async def _save_chat_turn(
     await db.commit()
     await db.refresh(assistant_msg)
     return assistant_msg
+
+
+async def _persist_chat_turn_background(
+    session_id: str,
+    user_message: str,
+    result: dict,
+    assistant_message_id: str,
+) -> None:
+    async with async_session() as db:
+        await _save_chat_turn(
+            db,
+            session_id,
+            user_message,
+            HealthAdvisorState(**result),
+            assistant_message_id=assistant_message_id,
+        )
+
+
+def _schedule_urgent_chat_turn(
+    session_id: str,
+    user_message: str,
+    result: HealthAdvisorState,
+) -> tuple[str, bool]:
+    """Queue chat persistence so urgent instructions are returned first."""
+    message_id = str(uuid.uuid4())
+    snapshot = dict(result)
+    trace_id = str(snapshot.get("trace_id") or "")
+    scheduled = _schedule_background_task(
+        lambda: _persist_chat_turn_background(
+            session_id,
+            user_message,
+            snapshot,
+            message_id,
+        ),
+        operation="urgent-chat-persistence",
+        trace_id=trace_id,
+    )
+    return message_id, scheduled
 
 
 def _message_to_dict(message: ChatMessage) -> dict[str, Any]:
@@ -297,14 +338,20 @@ async def send_message(
             trace_id=getattr(request.state, "trace_id", get_trace_id()),
         )
         result = await _process_state(state)
-        assistant_msg = await _save_chat_turn(db, session.id, message, result)
-        session_title = await _get_session_title(db, session.id, message)
+        if (result.get("safety_flag") or {}).get("is_urgent"):
+            message_id, scheduled = _schedule_urgent_chat_turn(session.id, message, result)
+            result["message_persistence_scheduled"] = scheduled
+            session_title = _compact_session_title(message)
+        else:
+            assistant_msg = await _save_chat_turn(db, session.id, message, result)
+            message_id = assistant_msg.id
+            session_title = await _get_session_title(db, session.id, message)
 
         return SendMessageResponse(
             reply=result.get("response", ""),
             session_id=session.id,
             session_title=session_title,
-            message_id=assistant_msg.id,
+            message_id=message_id,
             trace_id=result.get("trace_id", getattr(request.state, "trace_id", "")),
             citations=result.get("citations", []),
             suggested_questions=result.get("suggested_questions", []),
@@ -361,15 +408,21 @@ async def stream_response(
         if suggested_questions:
             yield f"data: {json.dumps({'suggestedQuestions': suggested_questions}, ensure_ascii=False)}\n\n"
 
-        async with async_session() as db:
-            assistant_msg = await _save_chat_turn(db, session.id, message, result)
-            session_title = await _get_session_title(db, session.id, message)
+        if (result.get("safety_flag") or {}).get("is_urgent"):
+            message_id, scheduled = _schedule_urgent_chat_turn(session.id, message, result)
+            result["message_persistence_scheduled"] = scheduled
+            session_title = _compact_session_title(message)
+        else:
+            async with async_session() as db:
+                assistant_msg = await _save_chat_turn(db, session.id, message, result)
+                session_title = await _get_session_title(db, session.id, message)
+            message_id = assistant_msg.id
 
         done_payload = {
             "done": True,
             "session_id": session.id,
             "session_title": session_title,
-            "message_id": assistant_msg.id,
+            "message_id": message_id,
             "trace_id": trace_id,
         }
         yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"

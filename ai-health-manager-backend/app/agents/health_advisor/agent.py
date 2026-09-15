@@ -36,7 +36,8 @@ class HealthAdvisorAgent(BaseAgent):
     - Health education
 
     State Machine:
-        load_context → check_safety → [urgent_reply | classify_intent]
+        check_safety → [urgent_reply | load_context]
+        load_context → classify_intent
         classify_intent → memory_route → retrieve_memory → plan_tasks
         plan_tasks → [dispatch_agents | rag_retrieve | generate_response]
         dispatch_agents → aggregate_results → [rag_retrieve | generate_response]
@@ -72,11 +73,12 @@ class HealthAdvisorAgent(BaseAgent):
         workflow.add_node("generate_response", generate_response)
         workflow.add_node("post_process", post_process)
 
-        # Set entry point
-        workflow.set_entry_point("load_context")
+        # Safety must run before any database, cache, retrieval, or model work
+        # that is not necessary to recognize deterministic emergency phrases.
+        workflow.set_entry_point("check_safety")
 
         # Add edges
-        workflow.add_edge("load_context", "check_safety")
+        workflow.add_edge("load_context", "classify_intent")
 
         # Conditional routing from safety check
         workflow.add_conditional_edges(
@@ -84,12 +86,13 @@ class HealthAdvisorAgent(BaseAgent):
             self._route_after_safety,
             {
                 "urgent": "urgent_reply",
-                "normal": "classify_intent",
+                "normal": "load_context",
             },
         )
 
-        # Urgent reply goes to post_process
-        workflow.add_edge("urgent_reply", "post_process")
+        # Urgent replies end immediately; their non-critical memory work is
+        # scheduled by urgent_reply and must not block the response.
+        workflow.add_edge("urgent_reply", END)
 
         # Normal flow
         workflow.add_edge("classify_intent", "memory_route")

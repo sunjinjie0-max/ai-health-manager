@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 
 from app.agents.health_advisor.prompts import FOLLOWUP_QUESTIONS_PROMPT
 from app.agents.health_advisor.state import HealthAdvisorState
@@ -21,6 +22,66 @@ from app.models.database import async_session
 from app.services.suggested_questions import filter_suggested_questions
 
 logger = logging.getLogger(__name__)
+
+_BACKGROUND_TASKS: set[asyncio.Task] = set()
+
+
+def _schedule_background_task(
+    task_factory: Callable[[], Awaitable[None]],
+    *,
+    operation: str,
+    trace_id: str,
+) -> bool:
+    """Start and retain a traced background task until it finishes."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        logger.error(
+            "Cannot schedule background operation=%s trace=%s without an event loop",
+            operation,
+            trace_id,
+        )
+        return False
+
+    task = loop.create_task(
+        task_factory(),
+        name=f"health-advisor:{operation}:{trace_id or 'untraced'}",
+    )
+    _BACKGROUND_TASKS.add(task)
+
+    def _log_completion(completed: asyncio.Task) -> None:
+        _BACKGROUND_TASKS.discard(completed)
+        if completed.cancelled():
+            logger.warning(
+                "Background operation cancelled operation=%s trace=%s",
+                operation,
+                trace_id,
+            )
+            return
+        error = completed.exception()
+        if error is not None:
+            logger.error(
+                "Background operation failed operation=%s trace=%s: %s",
+                operation,
+                trace_id,
+                error,
+                exc_info=(type(error), error, error.__traceback__),
+            )
+            return
+        logger.info(
+            "Background operation completed operation=%s trace=%s",
+            operation,
+            trace_id,
+        )
+
+    task.add_done_callback(_log_completion)
+    logger.info(
+        "Background operation scheduled operation=%s trace=%s",
+        operation,
+        trace_id,
+    )
+    return True
+
 
 def _extract_profile_from_response(response: str, user_message: str) -> dict:
     """Backward-compatible rule-only view used by existing callers/tests."""
@@ -132,6 +193,34 @@ def _update_short_term_memory(
 
     except Exception as e:
         logger.error(f"Failed to update memory: {e}")
+
+
+async def _persist_urgent_memories(state: dict) -> None:
+    """Persist non-critical memories without delaying an urgent response."""
+    user_id = str(state.get("user_id") or "")
+    session_id = str(state.get("session_id") or "")
+    user_message = str(state.get("user_message") or "")
+    response = str(state.get("response") or "")
+
+    _update_short_term_memory(user_id, session_id, user_message, response, {})
+    await long_term_memory.store_user_message_memories(
+        user_id=user_id,
+        session_id=session_id,
+        user_message=user_message,
+        assistant_response=response,
+        extracted_profile={},
+    )
+
+
+def schedule_urgent_post_process(state: HealthAdvisorState) -> bool:
+    """Schedule urgent-turn memory work and return immediately."""
+    snapshot = dict(state)
+    trace_id = str(snapshot.get("trace_id") or "")
+    return _schedule_background_task(
+        lambda: _persist_urgent_memories(snapshot),
+        operation="urgent-memory",
+        trace_id=trace_id,
+    )
 
 
 async def _persist_profile_update(

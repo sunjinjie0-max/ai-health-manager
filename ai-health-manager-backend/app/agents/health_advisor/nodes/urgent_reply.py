@@ -24,9 +24,7 @@ URGENT_REPLY_TEMPLATE = """🚨 **紧急医疗警告** 🚨
 **请记住：**
 - 在线健康咨询不能替代紧急医疗服务
 - 在紧急情况下，每一分钟都很重要
-- 当 doubt 时，请优先选择就医
-
-如果您的情况不是紧急情况，请重新描述您的症状，我们将为您提供帮助。
+- 如有疑问，请优先选择立即就医，不要自行等待症状缓解
 """
 
 
@@ -72,6 +70,14 @@ async def urgent_reply(state: HealthAdvisorState) -> HealthAdvisorState:
     # Update state
     state["response"] = response
     state["safety_flag"] = safety_flag  # Ensure safety flag is preserved
-    state["next_node"] = "post_process"
+    state["suggested_questions"] = []
+    state["next_node"] = "end"
+
+    # Memory persistence is useful for later context, but must never delay an
+    # emergency instruction. Import locally to keep this node's dependency
+    # surface small and schedule the work without awaiting it.
+    from app.agents.health_advisor.nodes.post_process import schedule_urgent_post_process
+
+    state["post_process_scheduled"] = schedule_urgent_post_process(state)
 
     return state
